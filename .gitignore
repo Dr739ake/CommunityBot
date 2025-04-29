@@ -6,6 +6,7 @@ data.json
 data/
 nvram/
 *.properties
+multibanbot_data.json
 
 ### IntelliJ IDEA ###
 .idea/

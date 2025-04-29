@@ -336,6 +336,11 @@ public class Main implements HttpHandler {
                     /// MutliBanBot ///
                     Commands.slash("globalban", "Bannt einen User auf allen verfügbaren Servern")
                             .addOption(OptionType.USER, "user", "Mitglied", true)
+                            .addOption(OptionType.STRING, "reason", "Banngrund: Default = CBann")
+                    ,
+                    Commands.slash("globalbanid", "Bannt einen User auf allen verfügbaren Servern")
+                            .addOption(OptionType.STRING, "userid", "Mitglied", true)
+                            .addOption(OptionType.STRING, "reason", "Banngrund: Default = CBann")
                     ,
                     Commands.slash("addtocommuntiy", "Fügt den Server zu einer Community hinzu")
                             .addOption(OptionType.STRING, "community", "Community", true, true)
@@ -397,6 +402,11 @@ public class Main implements HttpHandler {
                     /// MutliBanBot ///
                     Commands.slash("globalban", "Bannt einen User auf allen verfügbaren Servern")
                             .addOption(OptionType.USER, "user", "Mitglied", true)
+                            .addOption(OptionType.STRING, "reason", "Banngrund: Default = CBann")
+                    ,
+                    Commands.slash("globalbanid", "Bannt einen User auf allen verfügbaren Servern")
+                            .addOption(OptionType.STRING, "userid", "Mitglied", true)
+                            .addOption(OptionType.STRING, "reason", "Banngrund: Default = CBann")
                     ,
                     Commands.slash("addtocommuntiy", "Fügt den Server zu einer Community hinzu")
                             .addOption(OptionType.STRING, "community", "Community", true, true)

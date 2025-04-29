@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -60,6 +61,10 @@ public class MultiBanBot extends ListenerAdapter {
                 if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
                     target = Objects.requireNonNull(event.getInteraction().getOption("user")).getAsMember();
                     Community community = getCommunityByServerId(Objects.requireNonNull(event.getGuild()).getId());
+                    String reason = event.getInteraction().getOption("reason").getAsString();
+                    if (reason.isEmpty()) {
+                        reason = "Communityausschluss";
+                    }
 
                     StringBuilder reply = new StringBuilder();
                     assert community != null;
@@ -69,8 +74,38 @@ public class MultiBanBot extends ListenerAdapter {
                         assert target != null;
                         Collection<UserSnowflake> users = new ArrayList<>();
                         users.add(target);
-                        guild.ban(users, Duration.ZERO).reason("Communityausschluss").queue();
+                        guild.ban(users, Duration.ZERO).reason(reason).queue();
                         reply.append(target.getAsMention()).append(" banned from ").append(guild.getName());
+                    }
+
+                    event.reply(reply.toString()).queue();
+                } else {
+                    event.reply("No Persmission").queue();
+                }
+            }
+            break;
+            case "globalbanid":
+            {
+                if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
+                    String userid = event.getInteraction().getOption("userid").getAsString();
+                    String reason = event.getInteraction().getOption("reason").getAsString();
+                    if (reason.isEmpty()) {
+                        reason = "Communityausschluss";
+                    }
+                    jda.retrieveUserById(userid).queue();
+                    UserSnowflake userSnowflake = User.fromId(userid);
+
+                    Community community = getCommunityByServerId(Objects.requireNonNull(event.getGuild()).getId());
+
+                    StringBuilder reply = new StringBuilder();
+                    assert community != null;
+                    for (String serverId: community.servers) {
+                        Guild guild = jda.getGuildById(serverId);
+                        assert guild != null;
+                        Collection<UserSnowflake> users = new ArrayList<>();
+                        users.add(userSnowflake);
+                        guild.ban(users, Duration.ZERO).reason(reason).queue();
+                        reply.append(userSnowflake.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
                     }
 
                     event.reply(reply.toString()).queue();
