@@ -1,5 +1,6 @@
 package de.jns.serverinfo;
 
+import de.jns.Main;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Message;
@@ -13,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 
 public class ServerinfoBot extends ListenerAdapter {
-    public static final Logger log = LoggerFactory.getLogger(ServerinfoBot.class);
     public JDA jda;
     public TextChannel myChannel;
 
@@ -27,10 +27,10 @@ public class ServerinfoBot extends ListenerAdapter {
                     .build().awaitReady();
 
             myChannel = jda.getTextChannelById(channelId);
-            System.out.println("my Server is " + myChannel.getGuild().getName());
-            System.out.println("my Channel is " + myChannel.getName());
+            Main.LOG("my Server is " + myChannel.getGuild().getName());
+            Main.LOG("my Channel is " + myChannel.getName());
         } catch ( Exception e ) {
-            log.error("e: ", e);
+            Main.LOG("e: " + e);
         }
     }
 
@@ -42,7 +42,7 @@ public class ServerinfoBot extends ListenerAdapter {
         }
         catch (Exception e)
         {
-            System.out.println("The message was deleted, creating a new one.");
+            Main.LOG("The message was deleted, creating a new one.");
             message = CreateMessage(embed, myChannel);
         }
 
