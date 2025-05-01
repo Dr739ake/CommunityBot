@@ -146,12 +146,6 @@ public class MultiBanBot extends ListenerAdapter {
         }
     }
 
-    @Override
-    public void onGuildJoin(GuildJoinEvent event) {
-        System.out.println("Joined new server: " + event.getGuild().getName());
-        Main.addCommands(event.getGuild(), false);
-    }
-
 /// /// STATIC /// ///
 
     public static final String JSON_FILE = "multibanbot_data.json";

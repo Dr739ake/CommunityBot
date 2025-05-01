@@ -67,7 +67,7 @@ public class Main implements HttpHandler {
             connection.beginRequest();
             statement = connection.createStatement();
             resultSet = statement.executeQuery(query);
-            // System.out.println(query);
+            // Main.LOG(query);
             connection.endRequest();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -146,7 +146,7 @@ public class Main implements HttpHandler {
         botToken = properties.getProperty("token");
         botChannel = properties.getProperty("channelId");
 
-        System.out.println("Port: " + port);
+        Main.LOG("Port: " + port);
 
         ServerinfoBot bot = new ServerinfoBot(botToken, botChannel);
 
@@ -154,8 +154,8 @@ public class Main implements HttpHandler {
         server.createContext("/", new Main());
         server.setExecutor(null);
         server.start();
-        System.out.println("HTTP Server Ready");
-        System.out.println("BOT-Name: " + bot.jda.getSelfUser().getName());
+        Main.LOG("HTTP Server Ready");
+        Main.LOG("BOT-Name: " + bot.jda.getSelfUser().getName());
 
         dataDIR = new File("nvram");
         if (!dataDIR.exists()){
@@ -165,7 +165,7 @@ public class Main implements HttpHandler {
         for(String file: Objects.requireNonNull(dataDIR.list())) {
             String s = Files.readString(Path.of("nvram/" + file));
             s = s.replaceAll("(\\r|\\n)", "");
-            //System.out.println(file + " -> " + s);
+            //Main.LOG(file + " -> " + s);
             RestAction<Message> messageRestAction = bot.myChannel.retrieveMessageById(s);
             Message complete = null;
             int counter = 0;
@@ -181,7 +181,7 @@ public class Main implements HttpHandler {
             if (complete != null) {
                 messages.put(file, complete);
             } else {
-                System.out.println("Message was deleted in the meantime.");
+                Main.LOG("Message was deleted in the meantime.");
             }
         }
         return bot;
@@ -221,7 +221,7 @@ public class Main implements HttpHandler {
 
         // Load and register MariaDB JDBC driver (optional in recent versions)
         Class.forName("org.mariadb.jdbc.Driver");
-        System.out.println("Connected to MariaDB!");
+        Main.LOG("Connected to MariaDB!");
 
         for (String q : createTableQuerys) {
             ExecuteQuery(q);
@@ -255,7 +255,7 @@ public class Main implements HttpHandler {
         try {
             devMode = Boolean.parseBoolean(properties.getProperty("devMode"));
             if (devMode) {
-                System.out.println("!!!DEVMODE ENABLED!!!");
+                Main.LOG("!!!DEVMODE ENABLED!!!");
             }
         } catch (Exception e) {
             devMode = false;
@@ -421,11 +421,11 @@ public class Main implements HttpHandler {
 
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
-        System.out.println("Received POST from: " + httpExchange.getRemoteAddress());
+        Main.LOG("Received POST from: " + httpExchange.getRemoteAddress());
         InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(), StandardCharsets.UTF_8);
         BufferedReader br = new BufferedReader(isr);
         String serverId = httpExchange.getRequestHeaders().get("serverid").get(0);
-        System.out.println("ServerId = " + serverId);
+        Main.LOG("ServerId = " + serverId);
 
 
         int b;
@@ -447,11 +447,11 @@ public class Main implements HttpHandler {
             Color color = new Color(rgb.getInt("red"), rgb.getInt("green"), rgb.getInt("blue"));
             JSONArray players = json.getJSONArray("players");
 
-            //System.out.println("Content: ");
-            System.out.println("name: "+ name);
-            //System.out.println("map: "+ map);
-            //System.out.println("ip: "+ ip);
-            //System.out.println("maxPlayers: "+ maxPlayers);
+            //Main.LOG("Content: ");
+            Main.LOG("name: "+ name);
+            //Main.LOG("map: "+ map);
+            //Main.LOG("ip: "+ ip);
+            //Main.LOG("maxPlayers: "+ maxPlayers);
 
             EmbedBuilder builder = new EmbedBuilder();
 

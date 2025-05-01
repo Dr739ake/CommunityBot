@@ -44,7 +44,7 @@ public class RollenBot extends ListenerAdapter {
         try {
             channel = jda.getTextChannelById(Main.logChannels.get(guild.getId()));
         } catch (Exception e) {
-            System.out.println("Logchannel missing for " + guild.getName());
+            Main.LOG("Logchannel missing for " + guild.getName());
         }
         if (channel != null)
             channel.sendMessage(content).queue();
@@ -712,7 +712,7 @@ public class RollenBot extends ListenerAdapter {
 
     @Override
     public void onGuildJoin(GuildJoinEvent event) {
-        System.out.println("Joined new server: " + event.getGuild().getName());
+        Main.LOG("Joined new server: " + event.getGuild().getName());
         Main.addCommands(event.getGuild(), false);
         Main.ExecuteQuery("INSERT IGNORE INTO servers (id) VALUES ('" + event.getGuild().getId() + "');");
     }

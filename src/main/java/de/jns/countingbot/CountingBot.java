@@ -82,7 +82,7 @@ public class CountingBot extends ListenerAdapter {
             if (event.getMember().hasPermission(Permission.ADMINISTRATOR))
                 return;
             event.getMessage().delete().queue();
-            System.out.println("Deleted invalid message: '" + event.getMessage().getContentRaw() + "' send by '"
+            Main.LOG("Deleted invalid message: '" + event.getMessage().getContentRaw() + "' send by '"
                     + event.getAuthor().getName() + "'");
             return;
         }
@@ -103,7 +103,7 @@ public class CountingBot extends ListenerAdapter {
                 embedBuilder.setColor(Color.RED);
                 embedBuilder.setTitle("[Fail] Nicht zweimal hintereinander.");
 
-                System.out.println("[ " + " ] User '" + event.getAuthor().getName() + "' failed at "
+                Main.LOG("[ " + " ] User '" + event.getAuthor().getName() + "' failed at "
                         + (serverData.curNum + 1) + ". They counted twice.");
                 event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
                 bRememberLastCountMessage = false;
@@ -124,7 +124,7 @@ public class CountingBot extends ListenerAdapter {
             embedBuilder.setColor(Color.RED);
             embedBuilder.setTitle("[Fail] Fangt wieder bei 1 an.");
             embedBuilder.setFooter("Die erwartete Zahl war eigentlich: " + (serverData.curNum + 1));
-            System.out.println("User '" + event.getAuthor().getName() + "' failed at " + (serverData.curNum + 1)
+            Main.LOG("User '" + event.getAuthor().getName() + "' failed at " + (serverData.curNum + 1)
                     + " with the number " + number + ". Wrong Number.");
             event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
             bRememberLastCountMessage = false;
@@ -145,7 +145,7 @@ public class CountingBot extends ListenerAdapter {
             }
 
             serverData.save();
-            System.out.println("User '" + event.getAuthor().getName() + "' counted " + number + ".");
+            Main.LOG("User '" + event.getAuthor().getName() + "' counted " + number + ".");
 
             if (number > serverData.highScore) {
                 String trophy = "\uD83C\uDFC6";
@@ -283,8 +283,8 @@ public class CountingBot extends ListenerAdapter {
 
                 event.getChannel().sendMessage("Die aktuelle Zahl lautet: " + serverData.curNum).queue();
                 } catch (Exception e) {
-                    System.out.println( "This shit did not work as intented, BUT is still banned the User" );
-                    System.out.println( "Exception: " );
+                    Main.LOG( "This shit did not work as intented, BUT it still banned the User" );
+                    Main.LOG( "Exception: " );
                     e.printStackTrace();
                 }
 
