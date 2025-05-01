@@ -168,7 +168,7 @@ public class RollenBot extends ListenerAdapter {
                     String groupname = Objects.requireNonNull(event.getInteraction().getOption("groupname")).getAsString();
                     String serverid = Objects.requireNonNull(event.getGuild()).getId();
 
-                    if (groupname.contains("'") || groupname.contains("\"") || groupname.contains(";") || groupname.contains("DELETE") || groupname.contains("DROP")) {
+                    if (groupname.contains("'") || groupname.contains("\"") || groupname.contains(";") || groupname.contains("DELETE") || groupname.contains("DROP") || groupname.contains("´") || groupname.contains("`")) {
                         EmbedBuilder eb = new EmbedBuilder();
                         eb.setTitle( "groupname invalid");
                         embeds.add(eb.build());
