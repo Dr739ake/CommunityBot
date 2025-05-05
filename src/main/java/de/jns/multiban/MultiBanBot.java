@@ -75,7 +75,7 @@ public class MultiBanBot extends ListenerAdapter {
                         Collection<UserSnowflake> users = new ArrayList<>();
                         users.add(target);
                         guild.ban(users, Duration.ZERO).reason(reason).queue();
-                        reply.append(target.getAsMention()).append(" banned from ").append(guild.getName());
+                        reply.append(target.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
                     }
 
                     event.reply(reply.toString()).queue();
