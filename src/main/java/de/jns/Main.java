@@ -1,40 +1,25 @@
 package de.jns;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
 import de.jns.countingbot.CountingBot;
 import de.jns.countingbot.ServerData;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
-import de.jns.serverinfo.ServerinfoBot;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.requests.RestAction;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.awt.*;
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.*;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
 
-public class Main implements HttpHandler {
+public class Main {
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
@@ -78,7 +63,6 @@ public class Main implements HttpHandler {
     static MultiBanBot multiBanBot;
     static RollenBot rollenBot;
     static CountingBot countingBot;
-    static ServerinfoBot statusinfoBot;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -103,7 +87,6 @@ public class Main implements HttpHandler {
         rollenBot = setupRollenmeister();
         multiBanBot = setupMultiBan();
         countingBot = setupCountingBot();
-        statusinfoBot = setupServerinfoBot();
 
         boolean running = true;
         while (running) {
@@ -114,7 +97,6 @@ public class Main implements HttpHandler {
                 rollenBot.jda.shutdown();
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
-                statusinfoBot.jda.shutdown();
                 running = false;
                 main(null);
             } else if (in.equals("stop")) {
@@ -122,7 +104,6 @@ public class Main implements HttpHandler {
                 rollenBot.jda.shutdown();
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
-                statusinfoBot.jda.shutdown();
                 running = false;
             } else {
                 LOG("Unknown Command");
@@ -130,61 +111,6 @@ public class Main implements HttpHandler {
             }
             sc.close();
         }
-    }
-
-    static File dataDIR;
-
-    public static ServerinfoBot setupServerinfoBot() throws IOException {
-        int port;
-        String portStr;
-
-        String botToken;
-        String botChannel;
-
-        portStr = (String) properties.get("port-web-server");
-        port = Integer.parseInt(portStr);
-        botToken = properties.getProperty("token");
-        botChannel = properties.getProperty("channelId");
-
-        Main.LOG("Port: " + port);
-
-        ServerinfoBot bot = new ServerinfoBot(botToken, botChannel);
-
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/", new Main());
-        server.setExecutor(null);
-        server.start();
-        Main.LOG("HTTP Server Ready");
-        Main.LOG("BOT-Name: " + bot.jda.getSelfUser().getName());
-
-        dataDIR = new File("nvram");
-        if (!dataDIR.exists()){
-            dataDIR.mkdirs();
-        }
-
-        for(String file: Objects.requireNonNull(dataDIR.list())) {
-            String s = Files.readString(Path.of("nvram/" + file));
-            s = s.replaceAll("(\\r|\\n)", "");
-            //Main.LOG(file + " -> " + s);
-            RestAction<Message> messageRestAction = bot.myChannel.retrieveMessageById(s);
-            Message complete = null;
-            int counter = 0;
-
-            while (complete == null && counter < 10)
-            {
-                try {
-                    counter++;
-                    complete = messageRestAction.complete();
-                } catch (Exception ignore) {}
-            }
-
-            if (complete != null) {
-                messages.put(file, complete);
-            } else {
-                Main.LOG("Message was deleted in the meantime.");
-            }
-        }
-        return bot;
     }
 
     public static MultiBanBot setupMultiBan() throws Exception {
@@ -417,119 +343,5 @@ public class Main implements HttpHandler {
                             .addOption(OptionType.STRING, "password", "Password", true)
             ).queue();
         }
-    }
-
-    @Override
-    public void handle(HttpExchange httpExchange) throws IOException {
-        Main.LOG("Received POST from: " + httpExchange.getRemoteAddress());
-        InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(), StandardCharsets.UTF_8);
-        BufferedReader br = new BufferedReader(isr);
-        String serverId = httpExchange.getRequestHeaders().get("serverid").get(0);
-        Main.LOG("ServerId = " + serverId);
-
-
-        int b;
-        StringBuilder stringBuilder = new StringBuilder(1024);
-        while ( (b = br.read()) != -1 )
-        {
-            stringBuilder.append((char) b);
-        }
-
-        JSONObject json = new JSONObject(stringBuilder.toString());
-        try
-        {
-            String name = json.getString("name");
-            String map = json.getString("map");
-            String ip = json.getString("ip");
-            int maxPlayers = json.getInt("maxPlayers");
-            JSONObject rgb = json.getJSONObject("color");
-
-            Color color = new Color(rgb.getInt("red"), rgb.getInt("green"), rgb.getInt("blue"));
-            JSONArray players = json.getJSONArray("players");
-
-            //Main.LOG("Content: ");
-            Main.LOG("name: "+ name);
-            //Main.LOG("map: "+ map);
-            //Main.LOG("ip: "+ ip);
-            //Main.LOG("maxPlayers: "+ maxPlayers);
-
-            EmbedBuilder builder = new EmbedBuilder();
-
-            builder.setTitle( name );
-            builder.setColor( color );
-
-            StringBuilder playerStrBuilder = new StringBuilder();
-            int iPlayerCnt = 0;
-            for (int i = 0; i < players.length(); i++)
-            {
-                playerStrBuilder.append(players.get(i));
-                if (i < players.length()-1)
-                {
-                    playerStrBuilder.append(", ");
-                }
-                /*
-                if (playerStrBuilder.length() % 40 == 0)
-                {
-                    playerStrBuilder.append("\n");
-                }
-                */
-                iPlayerCnt++;
-            }
-
-            builder.addField("Map", map, true);
-            builder.addField("IP-Adresse", ip, true);
-            String sConnectionLink = "steam://connect/" + ip;
-            builder.addField("Connection-Link", "["+sConnectionLink+"](https://"+sConnectionLink+")", true);
-
-            builder.addField("Players " + iPlayerCnt + "/" + maxPlayers + " (" + (int) ( ( (double)iPlayerCnt / (double)maxPlayers ) * 100) + "%)", playerStrBuilder.toString(), false);
-
-            ZoneId zoneId = ZoneId.of("Europe/Berlin");
-            ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss | dd.MM.yyyy");
-            String formattedTime = zonedDateTime.format(formatter);
-
-            builder.setFooter(formattedTime);
-
-            MessageEmbed embed = builder.build();
-
-            if (messages.containsKey(serverId))
-            {
-                Message message = messages.get(serverId);
-                Message newMessage = statusinfoBot.UpdateMessage(message, embed);
-
-                if (message != newMessage)
-                {
-                    messages.put(serverId, newMessage);
-                    PrintWriter out = new PrintWriter("nvram/" + serverId);
-                    out.println(message.getId());
-                    out.flush();
-                }
-            }
-            else
-            {
-                Message message = statusinfoBot.CreateMessage(embed, statusinfoBot.myChannel);
-                messages.put(serverId, message);
-                PrintWriter out = new PrintWriter("nvram/" + serverId);
-                out.println(message.getId());
-                out.flush();
-            }
-        }
-        catch (Exception e)
-        {
-            String response = e.toString();
-            httpExchange.sendResponseHeaders(500, response.length());
-            OutputStream os = httpExchange.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-        }
-        br.close();
-        isr.close();
-
-        String response = "Success";
-        httpExchange.sendResponseHeaders(200, response.length());
-        OutputStream os = httpExchange.getResponseBody();
-        os.write(response.getBytes());
-        os.close();
     }
 }
