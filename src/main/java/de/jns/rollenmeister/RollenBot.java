@@ -154,6 +154,7 @@ public class RollenBot extends ListenerAdapter {
         String groupName;
         List<MessageEmbed> embeds = new ArrayList<>();
         String logEntry = "";
+        String answer = "";
 
         boolean bIsExecutorAdmin = Objects.requireNonNull(executor).hasPermission(Permission.ADMINISTRATOR);
 
@@ -616,22 +617,18 @@ public class RollenBot extends ListenerAdapter {
                         sb.append("Keine Rollen gefunden");
                     } else {
                         while (resultSet.next()) {
-
                             RoleStruct r = new RoleStruct();
                             r.id = resultSet.getString("roleId");
                             r.isManager = resultSet.getBoolean("isManager");
                             r.isGeneric = resultSet.getBoolean("isGeneric");
                             r.pos = resultSet.getInt("rolePos");
-
                             sb.append(r).append("\n");
                         }
                     }
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-                EmbedBuilder eb = new EmbedBuilder();
-                eb.addField(groupname, sb.toString(), false);
-                embeds.add(eb.build());
+                answer = sb.toString();
             }
             break;
             case "serverinfo": {
@@ -705,6 +702,9 @@ public class RollenBot extends ListenerAdapter {
         // Logging
         if (!embeds.isEmpty())
             event.replyEmbeds(embeds).setEphemeral(true).queue();
+        else {
+            event.reply(answer).setEphemeral(true).queue();
+        }
 
         if (logEntry != null && !logEntry.equals(""))
             WriteToLogChannel(event.getGuild(), logEntry);
