@@ -61,8 +61,10 @@ public class MultiBanBot extends ListenerAdapter {
                 if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
                     target = Objects.requireNonNull(event.getInteraction().getOption("user")).getAsMember();
                     Community community = getCommunityByServerId(Objects.requireNonNull(event.getGuild()).getId());
-                    String reason = event.getInteraction().getOption("reason").getAsString();
-                    if (reason.isEmpty()) {
+                    String reason = null;
+                    try {
+                        reason = event.getInteraction().getOption("reason").getAsString();
+                    } catch (Exception e) {
                         reason = "Communityausschluss";
                     }
 
@@ -80,7 +82,7 @@ public class MultiBanBot extends ListenerAdapter {
 
                     event.reply(reply.toString()).queue();
                 } else {
-                    event.reply("No Persmission").queue();
+                    event.reply("No Permission").queue();
                 }
             }
             break;
@@ -88,8 +90,10 @@ public class MultiBanBot extends ListenerAdapter {
             {
                 if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
                     String userid = event.getInteraction().getOption("userid").getAsString();
-                    String reason = event.getInteraction().getOption("reason").getAsString();
-                    if (reason.isEmpty()) {
+                    String reason = null;
+                    try {
+                        reason = event.getInteraction().getOption("reason").getAsString();
+                    } catch (Exception e) {
                         reason = "Communityausschluss";
                     }
                     jda.retrieveUserById(userid).queue();
@@ -104,13 +108,16 @@ public class MultiBanBot extends ListenerAdapter {
                         assert guild != null;
                         Collection<UserSnowflake> users = new ArrayList<>();
                         users.add(userSnowflake);
-                        guild.ban(users, Duration.ZERO).reason(reason).queue();
+                        guild.ban(users, Duration.ZERO).reason(reason).queue(
+                                success -> Main.LOG("Banned " + userSnowflake.getId()),
+                                failure -> Main.LOG("Failed to ban " + userSnowflake.getId() + "\n" + failure)
+                        );
                         reply.append(userSnowflake.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
                     }
 
                     event.reply(reply.toString()).queue();
                 } else {
-                    event.reply("No Persmission").queue();
+                    event.reply("No Permission").queue();
                 }
             }
             break;
