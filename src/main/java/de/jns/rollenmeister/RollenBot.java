@@ -446,7 +446,11 @@ public class RollenBot extends ListenerAdapter {
 
                                     if (roleWasThere && previousRole != null && role != null) {
                                         event.getGuild().addRoleToMember(target, role).queue();
-                                        event.getGuild().removeRoleFromMember(target, previousRole).queue();
+
+                                        ResultSet resultSet2 = Main.ExecuteQuery("SELECT r.name, r.id, rolePos, isManager, isGeneric FROM groups_roles join roles r on groups_roles.role_id = r.id where group_id = "+groupId+" and rolePos = 0 and isGeneric = 1 r.id = " + previousRole.getId() + " order by rolePos DESC;");
+                                        if (!resultSet2.first()) {
+                                            event.getGuild().removeRoleFromMember(target, previousRole).queue();
+                                        }
 
                                         EmbedBuilder eb = new EmbedBuilder();
                                         eb.setTitle( "Done");
