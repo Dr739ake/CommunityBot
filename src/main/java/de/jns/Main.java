@@ -88,6 +88,7 @@ public class Main {
         multiBanBot = setupMultiBan();
         countingBot = setupCountingBot();
 
+        System.out.println("Hello World");
         boolean running = true;
         while (running) {
             Scanner sc = new Scanner(System.in);
