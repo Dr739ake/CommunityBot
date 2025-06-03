@@ -456,7 +456,7 @@ public class RollenBot extends ListenerAdapter {
                                         eb.setTitle( "Done");
                                         embeds.add(eb.build());
 
-                                        logEntry = executor.getAsMention() + " " + command + "d " + target.getAsMention()
+                                        logEntry = executor.getEffectiveName() + " " + command + "d " + target.getEffectiveName()
                                                 + " to " + role.getName() + "'" + groupName + "'";
                                         prev_pos = resultSet1.getInt("rolePos");
                                         break;
