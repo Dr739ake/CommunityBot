@@ -1,5 +1,6 @@
 package de.jns;
 
+import de.jns.birthdaybot.BirthdayBot;
 import de.jns.countingbot.CountingBot;
 import de.jns.countingbot.ServerData;
 import de.jns.multiban.MultiBanBot;
@@ -12,6 +13,7 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
 import java.io.*;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -52,7 +54,7 @@ public class Main {
             connection.beginRequest();
             statement = connection.createStatement();
             resultSet = statement.executeQuery(query);
-            // Main.LOG(query);
+            Main.LOG(query);
             connection.endRequest();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -63,6 +65,7 @@ public class Main {
     static MultiBanBot multiBanBot;
     static RollenBot rollenBot;
     static CountingBot countingBot;
+    static BirthdayBot birthdayBot;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -87,6 +90,7 @@ public class Main {
         rollenBot = setupRollenmeister();
         multiBanBot = setupMultiBan();
         countingBot = setupCountingBot();
+        birthdayBot = setupBirthdayBot();
 
         System.out.println("Hello World");
         boolean running = true;
@@ -98,6 +102,7 @@ public class Main {
                 rollenBot.jda.shutdown();
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
+                birthdayBot.jda.shutdown();
                 running = false;
                 main(null);
             } else if (in.equals("stop")) {
@@ -105,6 +110,7 @@ public class Main {
                 rollenBot.jda.shutdown();
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
+                birthdayBot.jda.shutdown();
                 running = false;
             } else {
                 LOG("Unknown Command");
@@ -112,6 +118,30 @@ public class Main {
             }
             sc.close();
         }
+    }
+
+    public static BirthdayBot setupBirthdayBot() throws Exception {
+        String token = properties.getProperty("token");
+        String channelId = properties.getProperty("birthdayChannel");
+        BirthdayBot bot = new BirthdayBot(token, channelId);
+
+        String[] createTableQuerys = {
+            "CREATE TABLE IF NOT EXISTS birthdays ( id varchar(255) PRIMARY KEY, day INT, month INT );"
+        };
+
+        // Load and register MariaDB JDBC driver (optional in recent versions)
+        Class.forName("org.mariadb.jdbc.Driver");
+        Main.LOG("Connected to MariaDB!");
+
+        for (String q : createTableQuerys) {
+            ExecuteQuery(q);
+        }
+
+        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
+        LOG("Bot Ready, should be ONLINE");
+        LOG("Token: " + token);
+
+        return bot;
     }
 
     public static MultiBanBot setupMultiBan() throws Exception {
@@ -276,6 +306,13 @@ public class Main {
                     Commands.slash("createcommuntiy", "Erstellt eine Community")
                             .addOption(OptionType.STRING, "community", "Community", true)
                             .addOption(OptionType.STRING, "password", "Password", true)
+                    ,
+                    /// BirthdayBot ///
+                    Commands.slash("geburtstageintragen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                            .addOption(OptionType.INTEGER, "tag", "Tag", true)
+                            .addOption(OptionType.INTEGER, "monat", "Monat", true)
+                    ,
+                    Commands.slash("geburtstagloeschen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -342,6 +379,13 @@ public class Main {
                     Commands.slash("createcommuntiy", "Erstellt eine Community")
                             .addOption(OptionType.STRING, "community", "Community", true)
                             .addOption(OptionType.STRING, "password", "Password", true)
+                    ,
+                    /// BirthdayBot ///
+                    Commands.slash("geburtstageintragen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                            .addOption(OptionType.INTEGER, "tag", "Tag", true)
+                            .addOption(OptionType.INTEGER, "monat", "Monat", true)
+                    ,
+                    Commands.slash("geburtstagloeschen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
             ).queue();
         }
     }
