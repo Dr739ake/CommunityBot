@@ -69,15 +69,16 @@ public class MultiBanBot extends ListenerAdapter {
                     }
 
                     StringBuilder reply = new StringBuilder();
-                    assert community != null;
-                    for (String serverId: community.servers) {
-                        Guild guild = jda.getGuildById(serverId);
-                        assert guild != null;
-                        assert target != null;
-                        Collection<UserSnowflake> users = new ArrayList<>();
-                        users.add(target);
-                        guild.ban(users, Duration.ZERO).reason(reason).queue();
-                        reply.append(target.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
+                    if (community != null) {
+                        for (String serverId: community.servers) {
+                            Guild guild = jda.getGuildById(serverId);
+                            if ( guild != null && target != null ) {
+                                Collection<UserSnowflake> users = new ArrayList<>();
+                                users.add(target);
+                                guild.ban(users, Duration.ZERO).reason(reason).queue();
+                                reply.append(target.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
+                            }
+                        }
                     }
 
                     event.reply(reply.toString()).queue();
@@ -102,17 +103,19 @@ public class MultiBanBot extends ListenerAdapter {
                     Community community = getCommunityByServerId(Objects.requireNonNull(event.getGuild()).getId());
 
                     StringBuilder reply = new StringBuilder();
-                    assert community != null;
-                    for (String serverId: community.servers) {
-                        Guild guild = jda.getGuildById(serverId);
-                        assert guild != null;
-                        Collection<UserSnowflake> users = new ArrayList<>();
-                        users.add(userSnowflake);
-                        guild.ban(users, Duration.ZERO).reason(reason).queue(
-                                success -> Main.LOG("Banned " + userSnowflake.getId()),
-                                failure -> Main.LOG("Failed to ban " + userSnowflake.getId() + "\n" + failure)
-                        );
-                        reply.append(userSnowflake.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
+                    if (community != null) {
+                        for (String serverId : community.servers) {
+                            Guild guild = jda.getGuildById(serverId);
+                            if( guild != null ) {
+                                Collection<UserSnowflake> users = new ArrayList<>();
+                                users.add(userSnowflake);
+                                guild.ban(users, Duration.ZERO).reason(reason).queue(
+                                        success -> Main.LOG("Banned " + userSnowflake.getId()),
+                                        failure -> Main.LOG("Failed to ban " + userSnowflake.getId() + "\n" + failure)
+                                );
+                                reply.append(userSnowflake.getAsMention()).append(" banned from ").append(guild.getName()).append("\n");
+                            }
+                        }
                     }
 
                     event.reply(reply.toString()).queue();

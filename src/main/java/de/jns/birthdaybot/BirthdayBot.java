@@ -86,46 +86,47 @@ public class BirthdayBot extends ListenerAdapter {
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         String command = event.getName();
         Member executor = event.getMember();
-
-        assert executor != null;
         event.deferReply(true).queue();
+        if (executor != null) {
+            switch (command) {
+                case "geburtstageintragen": {
+                    int day = Objects.requireNonNull(event.getOption("tag")).getAsInt();
+                    int month = Objects.requireNonNull(event.getOption("monat")).getAsInt();
 
-        switch (command) {
-            case "geburtstageintragen": {
-                int day = Objects.requireNonNull(event.getOption("tag")).getAsInt();
-                int month = Objects.requireNonNull(event.getOption("monat")).getAsInt();
-
-                Main.ExecuteQuery(
-                        "INSERT INTO birthday_days (id, day, month) VALUES ('"
-                                + executor.getId() + "', " + day + ", " + month + ") "
-                                + "ON DUPLICATE KEY UPDATE day = VALUES(day), month = VALUES(month);"
-                );
-
-                event.getHook().sendMessage("Dein Geburtstag wurde eingetragen.").queue();
-            }
-            break;
-            case "geburtstagloeschen": {
-                Main.ExecuteQuery("DELETE FROM birthday_days WHERE id = '" + executor.getId() + "';");
-                event.getHook().sendMessage("Dein Geburtstag wurde gelöscht.").queue();
-            }
-            break;
-            case "setgeburtstagechannel": {
-                String channelId = Objects.requireNonNull(event.getOption("channel")).getAsString();
-                TextChannel textChannelById = jda.getTextChannelById(channelId);
-
-                if (textChannelById != null) {
                     Main.ExecuteQuery(
-                            "INSERT INTO birthday_server_conf (server_id, textChannelId) VALUES ('"
-                                    + event.getGuild().getId() + "', '" + channelId + "') "
-                                    + "ON DUPLICATE KEY UPDATE server_id = VALUES(server_id), textChannelId = VALUES(textChannelId);"
+                            "INSERT INTO birthday_days (id, day, month) VALUES ('"
+                                    + executor.getId() + "', " + day + ", " + month + ") "
+                                    + "ON DUPLICATE KEY UPDATE day = VALUES(day), month = VALUES(month);"
                     );
 
-                    event.getHook().sendMessage("Channel eingetragen").queue();
-                } else {
-                    event.getHook().sendMessage("Dieser Channel existiert nicht.").queue();
+                    event.getHook().sendMessage("Dein Geburtstag wurde eingetragen.").queue();
                 }
+                break;
+                case "geburtstagloeschen": {
+                    Main.ExecuteQuery("DELETE FROM birthday_days WHERE id = '" + executor.getId() + "';");
+                    event.getHook().sendMessage("Dein Geburtstag wurde gelöscht.").queue();
+                }
+                break;
+                case "setgeburtstagechannel": {
+                    String channelId = Objects.requireNonNull(event.getOption("channel")).getAsString();
+                    TextChannel textChannelById = jda.getTextChannelById(channelId);
+
+                    if (textChannelById != null) {
+                        Main.ExecuteQuery(
+                                "INSERT INTO birthday_server_conf (server_id, textChannelId) VALUES ('"
+                                        + event.getGuild().getId() + "', '" + channelId + "') "
+                                        + "ON DUPLICATE KEY UPDATE server_id = VALUES(server_id), textChannelId = VALUES(textChannelId);"
+                        );
+
+                        event.getHook().sendMessage("Channel eingetragen").queue();
+                    } else {
+                        event.getHook().sendMessage("Dieser Channel existiert nicht.").queue();
+                    }
+                }
+                break;
             }
-            break;
+        } else {
+            event.getHook().sendMessage("Du exestierst scheinbar garnicht o.o? Melde dich bei @dr739ake... oder lass es.").queue();
         }
     }
 }
