@@ -699,8 +699,7 @@ public class RollenBot extends ListenerAdapter {
                 }
             }
             default:
-                break;
-
+                return;
         }
 
         // Logging

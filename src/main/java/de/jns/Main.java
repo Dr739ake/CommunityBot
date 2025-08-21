@@ -126,7 +126,8 @@ public class Main {
         BirthdayBot bot = new BirthdayBot(token, channelId);
 
         String[] createTableQuerys = {
-            "CREATE TABLE IF NOT EXISTS birthdays ( id varchar(255) PRIMARY KEY, day INT, month INT );"
+            "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT );",
+            "CREATE TABLE IF NOT EXISTS birthday_server_conf ( server_id VARCHAR(255) PRIMARY KEY, textChannelId VARCHAR(255) );"
         };
 
         // Load and register MariaDB JDBC driver (optional in recent versions)
@@ -312,7 +313,10 @@ public class Main {
                             .addOption(OptionType.INTEGER, "tag", "Tag", true)
                             .addOption(OptionType.INTEGER, "monat", "Monat", true)
                     ,
-                    Commands.slash("geburtstagloeschen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                    Commands.slash("geburtstagloeschen", "Du kannst deinen Geburtstag natürlich auch wieder löschen.")
+                    ,
+                    Commands.slash("setgeburtstagechannel", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                            .addOption(OptionType.CHANNEL, "channel", "Textchannel", true)
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -386,6 +390,9 @@ public class Main {
                             .addOption(OptionType.INTEGER, "monat", "Monat", true)
                     ,
                     Commands.slash("geburtstagloeschen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                    ,
+                    Commands.slash("setgeburtstagechannel", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                            .addOption(OptionType.CHANNEL, "channel", "Textchannel", true)
             ).queue();
         }
     }

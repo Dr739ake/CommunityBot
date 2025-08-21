@@ -148,8 +148,6 @@ public class MultiBanBot extends ListenerAdapter {
                 }
             }
             break;
-            default:
-                break;
         }
     }
 
