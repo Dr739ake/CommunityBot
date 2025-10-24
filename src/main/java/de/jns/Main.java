@@ -3,6 +3,7 @@ package de.jns;
 import de.jns.birthdaybot.BirthdayBot;
 import de.jns.countingbot.CountingBot;
 import de.jns.countingbot.ServerData;
+import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
 import net.dv8tion.jda.api.entities.Guild;
@@ -13,7 +14,6 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
 import java.io.*;
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -66,6 +66,7 @@ public class Main {
     static RollenBot rollenBot;
     static CountingBot countingBot;
     static BirthdayBot birthdayBot;
+    static ModerationBot moderationBot;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -78,6 +79,7 @@ public class Main {
             br.write("database=none\n");
             br.write("db-port=3306\n");
             br.write("port-web-server=none\n");
+            br.write("moderationLog=none\n");
 
             br.flush();
             br.close();
@@ -91,6 +93,7 @@ public class Main {
         multiBanBot = setupMultiBan();
         countingBot = setupCountingBot();
         birthdayBot = setupBirthdayBot();
+        moderationBot = setupModerationBot(properties.getProperty("moderationLog"));
 
         System.out.println("Hello World");
         boolean running = true;
@@ -103,6 +106,7 @@ public class Main {
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
                 birthdayBot.jda.shutdown();
+                moderationBot.jda.shutdown();
                 running = false;
                 main(null);
             } else if (in.equals("stop")) {
@@ -111,6 +115,7 @@ public class Main {
                 multiBanBot.jda.shutdown();
                 countingBot.jda.shutdown();
                 birthdayBot.jda.shutdown();
+                moderationBot.jda.shutdown();
                 running = false;
             } else {
                 LOG("Unknown Command");
@@ -137,6 +142,17 @@ public class Main {
         for (String q : createTableQuerys) {
             ExecuteQuery(q);
         }
+
+        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
+        LOG("Bot Ready, should be ONLINE");
+        LOG("Token: " + token);
+
+        return bot;
+    }
+
+    public static ModerationBot setupModerationBot(String moderationLogChannelname) throws Exception {
+        String token = properties.getProperty("token");
+        ModerationBot bot = new ModerationBot(token, moderationLogChannelname);
 
         LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
         LOG("Bot Ready, should be ONLINE");
