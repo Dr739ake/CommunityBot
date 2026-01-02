@@ -57,7 +57,7 @@ public class Main {
             Main.LOG(query);
             connection.endRequest();
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
         return resultSet;
     }
@@ -74,11 +74,10 @@ public class Main {
             br.write("token=none\n");
             br.write("devMode=false\n");
             br.write("db-ip=none\n");
+            br.write("db-port=3306\n");
             br.write("username=none\n");
             br.write("password=none\n");
             br.write("database=none\n");
-            br.write("db-port=3306\n");
-            br.write("port-web-server=none\n");
             br.write("moderationLog=none\n");
 
             br.flush();
@@ -89,11 +88,31 @@ public class Main {
         properties = new Properties();
         properties.load(new FileInputStream(PROPERTIES_FILE));
 
-        rollenBot = setupRollenmeister();
-        multiBanBot = setupMultiBan();
-        countingBot = setupCountingBot();
-        birthdayBot = setupBirthdayBot();
-        moderationBot = setupModerationBot(properties.getProperty("moderationLog"));
+        try{
+            rollenBot = setupRollenmeister();
+        } catch (Exception e) {
+            System.out.println("rollenBot failed to start: " + e.getMessage());
+        }
+        try{
+            multiBanBot = setupMultiBan();
+        } catch (Exception e) {
+            System.out.println("multiBanBot failed to start: " + e.getMessage());
+        }
+        try{
+            countingBot = setupCountingBot();
+        } catch (Exception e) {
+            System.out.println("countingBot failed to start: " + e.getMessage());
+        }
+        try{
+            birthdayBot = setupBirthdayBot();
+        } catch (Exception e) {
+            System.out.println("birthdayBot failed to start: " + e.getMessage());
+        }
+        try{
+            moderationBot = setupModerationBot(properties.getProperty("moderationLog"));
+        } catch (Exception e) {
+            System.out.println("moderationBot failed to start: " + e.getMessage());
+        }
 
         System.out.println("Hello World");
         boolean running = true;
