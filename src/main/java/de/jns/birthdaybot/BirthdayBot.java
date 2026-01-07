@@ -37,43 +37,52 @@ public class BirthdayBot extends ListenerAdapter {
                 executeFunction(jda, channelId);
             }
         };
-        long delay = calculateDelayUntilNineAM();
-        scheduler.scheduleAtFixedRate(dailyTask, delay, TimeUnit.DAYS.toMillis(1), TimeUnit.MILLISECONDS);
-
-    }
-
-    private static long calculateDelayUntilNineAM() {
-        Calendar now = Calendar.getInstance();
-        Calendar nextRun = Calendar.getInstance();
-
-        nextRun.set(Calendar.HOUR_OF_DAY, 9);
-        nextRun.set(Calendar.MINUTE, 0);
-        nextRun.set(Calendar.SECOND, 0);
-        nextRun.set(Calendar.MILLISECOND, 0);
-
-        if (now.after(nextRun)) {
-            nextRun.add(Calendar.DAY_OF_YEAR, 1);
-        }
-
-        return nextRun.getTimeInMillis() - now.getTimeInMillis();
+        scheduler.scheduleAtFixedRate(dailyTask, 0,1, TimeUnit.HOURS);
     }
 
     private static void executeFunction(JDA jda, String channelId) {
-        Main.LOG("Funktion ausgeführt um: " + new Date());
+        Main.LOG("Geburtstage gecheckt um: " + new Date());
 
         LocalDateTime now = LocalDateTime.now();
-        ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM birthday_days WHERE day = " + now.getDayOfMonth() + " and month = " + now.getMonthValue() + ";");
+
+        int day = now.getDayOfMonth();
+        int month = now.getMonthValue();
+
+        ResultSet resultSet = Main.ExecuteQuery_NOLOG("SELECT * FROM birthday_days WHERE day = " + day + " and month = " + month + " AND was_selebrated = 0;");
+        Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 0 WHERE NOT (day = " + day + " AND month = " + month + ");");
 
         TextChannel textChannelById = jda.getTextChannelById(channelId);
+        List<String> birthday_people = new ArrayList<>();
         if (textChannelById != null) {
             try {
                 while (resultSet.next()) {
                     String id = resultSet.getString("id");
-                    textChannelById.sendMessage(" <@"+id+"> hat heute Geburtstag! Alles Gute!").queue();
+                    birthday_people.add(id);
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        StringBuilder message = new StringBuilder();
+        if (birthday_people.size() == 1) {
+            message.append(":tada: :partying_face: :tada: <@"+birthday_people.get(0)+"> hat heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+        } else if (birthday_people.size() == 2) {
+            message.append(":tada: :partying_face: :tada: <@"+birthday_people.get(0)+"> und <@" + birthday_people.get(1) + "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+        } else if (birthday_people.size() > 1) {
+            message.append(":tada: :partying_face: :tada: ");
+            for(int i = 0; i < birthday_people.size() -2; i++) {
+                message.append("<@"+birthday_people.get(i)+">, ");
+            }
+            message.append("<@"+birthday_people.get( birthday_people.size()-2 )+">, und <@" + birthday_people.get( birthday_people.size()-1 )+ "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+        }
+        if (!message.isEmpty()) {
+            if (textChannelById != null) {
+                textChannelById.sendMessage(message.toString()).queue();
+            }
+            Main.LOG(message.toString());
+        }
+        for(String id : birthday_people) {
+            Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 1 WHERE id = "+id+";");
         }
     }
 

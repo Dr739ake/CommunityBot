@@ -23,6 +23,8 @@ import java.util.Scanner;
 
 public class Main {
 
+    public static String VERSION_NUMBER = "v1.4.1";
+
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
     public static HashMap<String, Role> adminRoles = new HashMap<>();
@@ -38,6 +40,28 @@ public class Main {
         System.out.println(format + " [LOG] " + s);
     }
 
+    public static ResultSet ExecuteQuery_NOLOG(String query) {
+        Statement statement;
+        ResultSet resultSet = null;
+        try {
+            // Database credentials
+            String url = "jdbc:mariadb://" + properties.getProperty("db-ip") + ":" + properties.getProperty("db-port") + "/" + properties.getProperty("database");
+            String username = properties.getProperty("username");
+            String password = properties.getProperty("password");
+
+            // Establish the connection
+            Connection connection = DriverManager.getConnection(url, username, password);
+
+            // Begin Request
+            connection.beginRequest();
+            statement = connection.createStatement();
+            resultSet = statement.executeQuery(query);
+            connection.endRequest();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return resultSet;
+    }
     public static ResultSet ExecuteQuery(String query) {
         Statement statement;
         ResultSet resultSet = null;
@@ -114,6 +138,7 @@ public class Main {
             System.out.println("moderationBot failed to start: " + e.getMessage());
         }
 
+        System.out.println("Bot-Version: " + VERSION_NUMBER);
         System.out.println("Hello World");
         boolean running = true;
         while (running) {
