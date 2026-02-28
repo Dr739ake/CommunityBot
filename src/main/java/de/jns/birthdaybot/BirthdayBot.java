@@ -4,7 +4,9 @@ import de.jns.Main;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -13,7 +15,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -132,5 +133,10 @@ public class BirthdayBot extends ListenerAdapter {
         } else {
             event.getHook().sendMessage("Du exestierst scheinbar garnicht o.o? Melde dich bei @dr739ake... oder lass es.").queue();
         }
+    }
+
+    @Override
+    public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
+        Main.ExecuteQuery_NOLOG("DELETE FROM birthday_days WHERE id = "+event.getUser().getId()+";");
     }
 }

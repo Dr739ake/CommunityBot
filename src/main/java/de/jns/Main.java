@@ -23,7 +23,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static String VERSION_NUMBER = "v1.4.1";
+    public static String VERSION_NUMBER = "v1.4.2";
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
