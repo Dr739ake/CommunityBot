@@ -7,7 +7,6 @@ import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -23,15 +22,13 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static String VERSION_NUMBER = "v1.4.2";
+    public static String VERSION_NUMBER = "v1.4.3";
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
     public static HashMap<String, Role> adminRoles = new HashMap<>();
     static Properties properties;
     static final String PROPERTIES_FILE = "ggc.properties";
-
-    private static final HashMap<String, Message> messages = new HashMap<>();
 
     public static void LOG(String s) {
         String format = ZonedDateTime
@@ -139,7 +136,6 @@ public class Main {
         }
 
         System.out.println("Bot-Version: " + VERSION_NUMBER);
-        System.out.println("Hello World");
         boolean running = true;
         while (running) {
             Scanner sc = new Scanner(System.in);

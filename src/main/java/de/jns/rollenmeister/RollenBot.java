@@ -18,7 +18,6 @@ import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Executable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;

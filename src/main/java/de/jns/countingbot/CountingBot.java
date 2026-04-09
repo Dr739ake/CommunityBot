@@ -19,8 +19,6 @@ import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.internal.entities.emoji.UnicodeEmojiImpl;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.text.DateFormat;
@@ -31,7 +29,6 @@ public class CountingBot extends ListenerAdapter {
     public static HashMap<String, ServerData> data = new HashMap<>();
     public static HashMap<String, ServerData> dataBackup = new HashMap<>();
 
-    private static final Logger log = LoggerFactory.getLogger(CountingBot.class);
     public JDA jda;
     private boolean bRememberLastCountMessage;
 
@@ -88,7 +85,7 @@ public class CountingBot extends ListenerAdapter {
         }
 
         Date now = new Date();
-        Locale locale = new Locale("de", "DE");
+        Locale locale = Locale.GERMAN;
 
         System.out.print(DateFormat.getDateInstance(DateFormat.DEFAULT, locale).format(now) + " " + DateFormat.getTimeInstance(DateFormat.DEFAULT, locale).format(now) + " || ");
 
