@@ -6,6 +6,7 @@ import de.jns.countingbot.ServerData;
 import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
+import de.jns.supportchannel.SupportChannelBot;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -22,7 +23,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static String VERSION_NUMBER = "v1.4.3";
+    public static String VERSION_NUMBER = "v1.5.0";
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
@@ -88,6 +89,7 @@ public class Main {
     static CountingBot countingBot;
     static BirthdayBot birthdayBot;
     static ModerationBot moderationBot;
+    static SupportChannelBot supportChannelBot;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -135,6 +137,12 @@ public class Main {
             System.out.println("moderationBot failed to start: " + e.getMessage());
         }
 
+        try{
+            supportChannelBot = setupSupportChannelBot();
+        } catch (Exception e) {
+            System.out.println("supportChannelBot failed to start: " + e.getMessage());
+        }
+
         System.out.println("Bot-Version: " + VERSION_NUMBER);
         boolean running = true;
         while (running) {
@@ -147,6 +155,7 @@ public class Main {
                 countingBot.jda.shutdown();
                 birthdayBot.jda.shutdown();
                 moderationBot.jda.shutdown();
+                supportChannelBot.jda.shutdown();
                 running = false;
                 main(null);
             } else if (in.equals("stop")) {
@@ -156,6 +165,7 @@ public class Main {
                 countingBot.jda.shutdown();
                 birthdayBot.jda.shutdown();
                 moderationBot.jda.shutdown();
+                supportChannelBot.jda.shutdown();
                 running = false;
             } else {
                 LOG("Unknown Command");
@@ -201,6 +211,17 @@ public class Main {
         return bot;
     }
 
+    public static SupportChannelBot setupSupportChannelBot() throws Exception {
+        String token = properties.getProperty("token");
+        SupportChannelBot bot = new SupportChannelBot(token);
+
+        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
+        LOG("Bot Ready, should be ONLINE");
+        LOG("Token: " + token);
+
+        return bot;
+    }
+
     public static MultiBanBot setupMultiBan() throws Exception {
         MultiBanBot.communitys = MultiBanBot.readMapFromJsonFile(MultiBanBot.JSON_FILE);
 
@@ -230,7 +251,8 @@ public class Main {
                 "CREATE TABLE IF NOT EXISTS servers ( id varchar(255) PRIMARY KEY, logchannel varchar(255), admin_role varchar(255) );",
                 "CREATE TABLE IF NOT EXISTS groups ( id INT PRIMARY KEY AUTO_INCREMENT, name varchar(255) NOT NULL, serverId varchar(255), FOREIGN KEY (serverId) REFERENCES servers(id) );",
                 "CREATE TABLE IF NOT EXISTS roles ( id varchar(255) PRIMARY KEY, name varchar(255) );",
-                "CREATE TABLE IF NOT EXISTS groups_roles (group_id INT, role_id varchar(255), rolePos INT NOT NULL, isManager BOOLEAN, isGeneric BOOLEAN, PRIMARY KEY (group_id, role_id), FOREIGN KEY (group_id) REFERENCES groups(id), FOREIGN KEY (role_id) REFERENCES roles(id) );"
+                "CREATE TABLE IF NOT EXISTS groups_roles (group_id INT, role_id varchar(255), rolePos INT NOT NULL, isManager BOOLEAN, isGeneric BOOLEAN, PRIMARY KEY (group_id, role_id), FOREIGN KEY (group_id) REFERENCES groups(id), FOREIGN KEY (role_id) REFERENCES roles(id) );",
+                "CREATE TABLE IF NOT EXISTS supportchannels ( channelId VARCHAR(255) PRIMARY KEY, pingChannelId VARCHAR(255), roleId VARCHAR(255) );"
         };
 
         // Load and register MariaDB JDBC driver (optional in recent versions)
@@ -371,8 +393,14 @@ public class Main {
                     ,
                     Commands.slash("geburtstagloeschen", "Du kannst deinen Geburtstag natürlich auch wieder löschen.")
                     ,
-                    Commands.slash("setgeburtstagechannel", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                    Commands.slash("setgeburtstagechannel", "Setzt den Channel, in dem die Geburtstage zelebriert werden.")
                             .addOption(OptionType.CHANNEL, "channel", "Textchannel", true)
+                    ,
+                    /// SupportChannel ///
+                    Commands.slash("setsupportchannel", "Verbinde einen VoiceChannel mit einer Rolle.")
+                            .addOption(OptionType.CHANNEL, "channel", "Voice-Channel", true)
+                            .addOption(OptionType.CHANNEL, "channel", "Ping-Channel", true)
+                            .addOption(OptionType.ROLE, "rolle", "Team-Rolle die gepingt werden soll.", true)
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -447,8 +475,14 @@ public class Main {
                     ,
                     Commands.slash("geburtstagloeschen", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
                     ,
-                    Commands.slash("setgeburtstagechannel", "Trage deinen Geburtstag ein, dann können wir dich gemeinsam Feiern.")
+                    Commands.slash("setgeburtstagechannel", "Setzt den Channel, in dem die Geburtstage zelebriert werden.")
                             .addOption(OptionType.CHANNEL, "channel", "Textchannel", true)
+                    ,
+                    /// SupportChannel ///
+                    Commands.slash("setsupportchannel", "Verbinde einen VoiceChannel mit einer Rolle.")
+                            .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
+                            .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
+                            .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
             ).queue();
         }
     }
