@@ -3,7 +3,6 @@ package de.jns.rollenmeister;
 import de.jns.Main;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -15,7 +14,6 @@ import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInterac
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
@@ -30,11 +28,8 @@ import java.util.stream.Stream;
 public class RollenBot extends ListenerAdapter {
     public JDA jda;
 
-    public RollenBot(String token) throws InterruptedException {
-        jda = JDABuilder.createLight(token,
-                        GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(this)
-                .build().awaitReady();
+    public RollenBot() {
+        jda = Main.jda;
         Main.LOG("RollenBot Constructor");
     }
 
@@ -89,8 +84,8 @@ public class RollenBot extends ListenerAdapter {
             case "add": {
                 List<Role> executorRoles = executor.getRoles();
                 ArrayList<Integer> groupIds = new ArrayList<>();
-                if (bMemberIsAdmin || ( Main.adminRoles.get(event.getGuild().getId()) != null &&  executor.getRoles().contains(Main.adminRoles.get(event.getGuild().getId())))) {
-                    ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM groups WHERE serverId = '"+event.getGuild().getId()+"';");
+                if (bMemberIsAdmin || (Main.adminRoles.get(event.getGuild().getId()) != null && executor.getRoles().contains(Main.adminRoles.get(event.getGuild().getId())))) {
+                    ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM groups WHERE serverId = '" + event.getGuild().getId() + "';");
 
                     try {
                         while (resultSet.next()) {
@@ -158,7 +153,7 @@ public class RollenBot extends ListenerAdapter {
         boolean bIsExecutorAdmin = Objects.requireNonNull(executor).hasPermission(Permission.ADMINISTRATOR);
 
         if (!bIsExecutorAdmin) {
-            bIsExecutorAdmin = ( Main.adminRoles.get(event.getGuild().getId()) != null &&  executor.getRoles().contains(Main.adminRoles.get(event.getGuild().getId())));
+            bIsExecutorAdmin = (Main.adminRoles.get(event.getGuild().getId()) != null && executor.getRoles().contains(Main.adminRoles.get(event.getGuild().getId())));
         }
 
         event.deferReply();
@@ -171,7 +166,7 @@ public class RollenBot extends ListenerAdapter {
 
                     if (groupname.contains("'") || groupname.contains("\"") || groupname.contains(";") || groupname.contains("DELETE") || groupname.contains("DROP") || groupname.contains("´") || groupname.contains("`")) {
                         EmbedBuilder eb = new EmbedBuilder();
-                        eb.setTitle( "groupname invalid");
+                        eb.setTitle("groupname invalid");
                         embeds.add(eb.build());
                         break;
                     }
@@ -186,11 +181,11 @@ public class RollenBot extends ListenerAdapter {
                         if (resultSet1.getRow() == 1 && resultSet2.getRow() == 0) {
                             Main.ExecuteQuery("INSERT IGNORE INTO groups (name, serverId) VALUES ('" + groupname + "', '" + serverid + "')");
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "group created");
+                            eb.setTitle("group created");
                             embeds.add(eb.build());
                         } else {
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "group with this name already exists");
+                            eb.setTitle("group with this name already exists");
                             embeds.add(eb.build());
                         }
                     } catch (Exception e) {
@@ -198,7 +193,7 @@ public class RollenBot extends ListenerAdapter {
                     }
                 } else {
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "Not permitted");
+                    eb.setTitle("Not permitted");
                     embeds.add(eb.build());
                 }
                 break;
@@ -250,14 +245,11 @@ public class RollenBot extends ListenerAdapter {
 
                             Main.ExecuteQuery("INSERT IGNORE INTO roles (id, name) VALUES ('" + role.getId() + "', '" + role.getName() + "');");
                             ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM groups_roles WHERE group_id = " + groupId + " AND role_id = '" + role.getId() + "';");
-                            if (resultSet.first() == false)
-                            {
+                            if (resultSet.first() == false) {
                                 Main.ExecuteQuery("INSERT INTO groups_roles (group_id, role_id, rolePos, isManager, isGeneric) VALUES (" + groupId + ", '" + role.getId() + "', " + rolePos + ", " + isManager + ", " + isGeneric + ");");
-                            }
-                            else
-                            {
+                            } else {
                                 EmbedBuilder eb = new EmbedBuilder();
-                                eb.setTitle( "Role already part of this group");
+                                eb.setTitle("Role already part of this group");
                                 embeds.add(eb.build());
                                 break;
                             }
@@ -272,7 +264,7 @@ public class RollenBot extends ListenerAdapter {
                             }
 
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "Role added");
+                            eb.setTitle("Role added");
                             embeds.add(eb.build());
                             break;
                         }
@@ -281,7 +273,7 @@ public class RollenBot extends ListenerAdapter {
                     }
                 } else {
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "Not permitted");
+                    eb.setTitle("Not permitted");
                     embeds.add(eb.build());
                 }
                 break;
@@ -292,7 +284,7 @@ public class RollenBot extends ListenerAdapter {
                 List<Role> executorRoles = executor.getRoles();
                 if (target != null) {
                     int groupId = -1;
-                    ResultSet resultSet = Main.ExecuteQuery("SELECT id FROM groups WHERE name = '"  + groupName +
+                    ResultSet resultSet = Main.ExecuteQuery("SELECT id FROM groups WHERE name = '" + groupName +
                             "' AND serverId = '" + event.getGuild().getId() + "';");
                     try {
                         resultSet.next();
@@ -325,7 +317,7 @@ public class RollenBot extends ListenerAdapter {
                                     event.getGuild().addRoleToMember(target, role).queue();
 
                                     EmbedBuilder eb = new EmbedBuilder();
-                                    eb.setTitle( "User added");
+                                    eb.setTitle("User added");
                                     embeds.add(eb.build());
 
                                     logEntry = executor.getAsMention() + " added " + target.getAsMention() + " to '" + groupName + "'";
@@ -335,7 +327,7 @@ public class RollenBot extends ListenerAdapter {
                             }
                         } else {
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "Not permitted");
+                            eb.setTitle("Not permitted");
                             embeds.add(eb.build());
                         }
                     }
@@ -378,7 +370,7 @@ public class RollenBot extends ListenerAdapter {
                                     event.getGuild().removeRoleFromMember(target, role).queue();
 
                                     EmbedBuilder eb = new EmbedBuilder();
-                                    eb.setTitle( "User remove");
+                                    eb.setTitle("User remove");
                                     embeds.add(eb.build());
 
                                     logEntry = executor.getAsMention() + " removed " + target.getAsMention() + " from '" + groupName + "'";
@@ -388,7 +380,7 @@ public class RollenBot extends ListenerAdapter {
                             }
                         } else {
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "Not permitted");
+                            eb.setTitle("Not permitted");
                             embeds.add(eb.build());
                         }
                     }
@@ -446,13 +438,13 @@ public class RollenBot extends ListenerAdapter {
                                     if (roleWasThere && previousRole != null && role != null) {
                                         event.getGuild().addRoleToMember(target, role).queue();
 
-                                        ResultSet resultSet2 = Main.ExecuteQuery("SELECT r.name, r.id, rolePos, isManager, isGeneric FROM groups_roles join roles r on groups_roles.role_id = r.id where group_id = "+groupId+" and rolePos = 0 and isGeneric = 1 r.id = " + previousRole.getId() + " order by rolePos DESC;");
+                                        ResultSet resultSet2 = Main.ExecuteQuery("SELECT r.name, r.id, rolePos, isManager, isGeneric FROM groups_roles join roles r on groups_roles.role_id = r.id where group_id = " + groupId + " and rolePos = 0 and isGeneric = 1 r.id = " + previousRole.getId() + " order by rolePos DESC;");
                                         if (!resultSet2.first()) {
                                             event.getGuild().removeRoleFromMember(target, previousRole).queue();
                                         }
 
                                         EmbedBuilder eb = new EmbedBuilder();
-                                        eb.setTitle( "Done");
+                                        eb.setTitle("Done");
                                         embeds.add(eb.build());
 
                                         logEntry = executor.getEffectiveName() + " " + command + "d " + target.getEffectiveName()
@@ -485,12 +477,12 @@ public class RollenBot extends ListenerAdapter {
                                     roleId_rm.remove(roleId);
                                 }
 
-                                for(String id : roleId_rm) {
+                                for (String id : roleId_rm) {
                                     Role role = jda.getRoleById(id);
                                     event.getGuild().removeRoleFromMember(target, role).queue();
                                 }
 
-                                for(String id : roleId_add) {
+                                for (String id : roleId_add) {
                                     Role role = jda.getRoleById(id);
                                     event.getGuild().addRoleToMember(target, role).queue();
                                 }
@@ -500,13 +492,13 @@ public class RollenBot extends ListenerAdapter {
                             }
                         } else {
                             EmbedBuilder eb = new EmbedBuilder();
-                            eb.setTitle( "Not permitted");
+                            eb.setTitle("Not permitted");
                             embeds.add(eb.build());
                         }
                     }
                 }
             }
-                break;
+            break;
             case "setlogchannel": {
                 if (bIsExecutorAdmin) {
                     TextChannel logchannel = Objects.requireNonNull(event.getInteraction().getOption("logchannel")).getAsChannel().asTextChannel();
@@ -514,18 +506,18 @@ public class RollenBot extends ListenerAdapter {
                     Main.ExecuteQuery("UPDATE servers SET logchannel = '" + logchannel.getId() + "' WHERE id = '" + serverId + "';");
 
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "logchannel updated");
+                    eb.setTitle("logchannel updated");
                     embeds.add(eb.build());
 
                     Main.logChannels.put(serverId, logchannel.getId());
                     logEntry = "Hello Logchannel :v";
                 } else {
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "Not permitted");
+                    eb.setTitle("Not permitted");
                     embeds.add(eb.build());
                 }
             }
-                break;
+            break;
             case "setadminrole": {
                 if (bIsExecutorAdmin) {
                     Role role = Objects.requireNonNull(event.getInteraction().getOption("role")).getAsRole();
@@ -533,18 +525,18 @@ public class RollenBot extends ListenerAdapter {
                     Main.ExecuteQuery("UPDATE servers SET admin_role = '" + role.getId() + "' WHERE id = '" + serverId + "';");
 
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( role.getAsMention() + " set as AdminRole");
+                    eb.setTitle(role.getAsMention() + " set as AdminRole");
                     embeds.add(eb.build());
 
                     logEntry = executor.getAsMention() + " set " + role.getAsMention() + " as AdminRole.";
                     Main.adminRoles.put(event.getGuild().getId(), role);
                 } else {
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "Not permitted");
+                    eb.setTitle("Not permitted");
                     embeds.add(eb.build());
                 }
             }
-                break;
+            break;
             case "cleargroup": {
                 if (bIsExecutorAdmin) {
                     String groupname = Objects.requireNonNull(event.getInteraction().getOption("groupname")).getAsString();
@@ -561,17 +553,17 @@ public class RollenBot extends ListenerAdapter {
                     Main.ExecuteQuery("DELETE FROM groups_roles WHERE group_id = " + groupId + ";");
 
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( groupname + " cleared");
+                    eb.setTitle(groupname + " cleared");
                     embeds.add(eb.build());
 
                     logEntry = executor.getAsMention() + " cleared Group '" + groupname + "'";
                 } else {
                     EmbedBuilder eb = new EmbedBuilder();
-                    eb.setTitle( "Not permitted");
+                    eb.setTitle("Not permitted");
                     embeds.add(eb.build());
                 }
             }
-                break;
+            break;
             case "deletegroup": {
                 if (bIsExecutorAdmin) {
                     String groupname = Objects.requireNonNull(event.getInteraction().getOption("groupname")).getAsString();
@@ -599,7 +591,7 @@ public class RollenBot extends ListenerAdapter {
                     embeds.add(eb.build());
                 }
             }
-                break;
+            break;
             case "groupinfo": {
                 String serverId = Objects.requireNonNull(event.getGuild()).getId();
                 String groupname = Objects.requireNonNull(event.getInteraction().getOption("groupname")).getAsString();
@@ -616,7 +608,7 @@ public class RollenBot extends ListenerAdapter {
                 resultSet = Main.ExecuteQuery("SELECT r.id as roleId, g.rolePos, g.isManager, g.isGeneric  FROM groups_roles g JOIN roles r ON r.id = g.role_id WHERE group_id = " + groupId + " ORDER BY rolePos ASC;");
                 StringBuilder sb = new StringBuilder();
                 try {
-                    if(!resultSet.first()) {
+                    if (!resultSet.first()) {
                         sb.append("Keine Rollen gefunden");
                     } else {
                         while (resultSet.next()) {
@@ -663,7 +655,7 @@ public class RollenBot extends ListenerAdapter {
 
                     resultSet = Main.ExecuteQuery("SELECT * FROM groups WHERE serverId = '" + serverId + "';");
 
-                    if(!resultSet.first()) {
+                    if (!resultSet.first()) {
                         EmbedBuilder eb = new EmbedBuilder();
                         eb.setTitle("Keine Gruppen gefunden");
                         embeds.add(eb.build());
@@ -727,9 +719,9 @@ public class RollenBot extends ListenerAdapter {
 
         @Override
         public String toString() {
-            return  jda.getRoleById(id).getAsMention() + " Position = " + pos +
+            return jda.getRoleById(id).getAsMention() + " Position = " + pos +
                     ", isManager = " + isManager +
-                    ", isGeneric = " + isGeneric ;
+                    ", isGeneric = " + isGeneric;
         }
     }
 }

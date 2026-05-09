@@ -2,7 +2,6 @@ package de.jns.multiban;
 
 import de.jns.Main;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -12,7 +11,6 @@ import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInterac
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,11 +24,8 @@ import java.util.stream.Stream;
 public class MultiBanBot extends ListenerAdapter {
     public JDA jda;
 
-    public MultiBanBot(String token) throws InterruptedException {
-        jda = JDABuilder.createLight(token,
-                        GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(this)
-                .build().awaitReady();
+    public MultiBanBot() {
+        jda = Main.jda;
         Main.LOG("MutliBanBot Constructor");
     }
 
@@ -53,8 +48,7 @@ public class MultiBanBot extends ListenerAdapter {
         Member target;
 
         switch (command) {
-            case "globalban":
-            {
+            case "globalban": {
                 if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
                     target = Objects.requireNonNull(event.getInteraction().getOption("user")).getAsMember();
                     Community community = getCommunityByServerId(Objects.requireNonNull(event.getGuild()).getId());
@@ -67,9 +61,9 @@ public class MultiBanBot extends ListenerAdapter {
 
                     StringBuilder reply = new StringBuilder();
                     if (community != null) {
-                        for (String serverId: community.servers) {
+                        for (String serverId : community.servers) {
                             Guild guild = jda.getGuildById(serverId);
-                            if ( guild != null && target != null ) {
+                            if (guild != null && target != null) {
                                 Collection<UserSnowflake> users = new ArrayList<>();
                                 users.add(target);
                                 guild.ban(users, Duration.ZERO).reason(reason).queue();
@@ -84,8 +78,7 @@ public class MultiBanBot extends ListenerAdapter {
                 }
             }
             break;
-            case "globalbanid":
-            {
+            case "globalbanid": {
                 if (Objects.requireNonNull(executor).hasPermission(Permission.BAN_MEMBERS)) {
                     String userid = event.getInteraction().getOption("userid").getAsString();
                     String reason = null;
@@ -103,7 +96,7 @@ public class MultiBanBot extends ListenerAdapter {
                     if (community != null) {
                         for (String serverId : community.servers) {
                             Guild guild = jda.getGuildById(serverId);
-                            if( guild != null ) {
+                            if (guild != null) {
                                 Collection<UserSnowflake> users = new ArrayList<>();
                                 users.add(userSnowflake);
                                 guild.ban(users, Duration.ZERO).reason(reason).queue(
@@ -121,8 +114,7 @@ public class MultiBanBot extends ListenerAdapter {
                 }
             }
             break;
-            case "createcommuntiy":
-            {
+            case "createcommuntiy": {
                 String sCommunity = Objects.requireNonNull(event.getInteraction().getOption("community")).getAsString();
                 String sPassword = Objects.requireNonNull(event.getInteraction().getOption("password")).getAsString();
 
@@ -135,13 +127,12 @@ public class MultiBanBot extends ListenerAdapter {
                 }
             }
             break;
-            case "addtocommuntiy":
-            {
+            case "addtocommuntiy": {
                 String sCommunity = Objects.requireNonNull(event.getInteraction().getOption("community")).getAsString();
                 String sPassword = Objects.requireNonNull(event.getInteraction().getOption("password")).getAsString();
 
                 if (Objects.requireNonNull(executor).hasPermission(Permission.ADMINISTRATOR)) {
-                    addServerToCommunity(sCommunity,sPassword, Objects.requireNonNull(event.getGuild()).getId());
+                    addServerToCommunity(sCommunity, sPassword, Objects.requireNonNull(event.getGuild()).getId());
                     event.reply("Success").queue();
                 } else {
                     event.reply("No Permission. This needs to be done by the Server Owner").queue();
@@ -151,7 +142,7 @@ public class MultiBanBot extends ListenerAdapter {
         }
     }
 
-/// /// STATIC /// ///
+    /// /// STATIC /// ///
 
     public static final String JSON_FILE = "multibanbot_data.json";
     static public HashMap<String, Community> communitys;
@@ -249,7 +240,7 @@ public class MultiBanBot extends ListenerAdapter {
     }
 
     static Community getCommunityByServerId(String serverId) {
-        for(String key : communitys.keySet()) {
+        for (String key : communitys.keySet()) {
             Community cm = communitys.get(key);
             if (cm.servers.contains(serverId))
                 return cm;

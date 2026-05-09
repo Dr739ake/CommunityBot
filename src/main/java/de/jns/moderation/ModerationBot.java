@@ -3,11 +3,9 @@ package de.jns.moderation;
 import de.jns.Main;
 
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberUpdateEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -15,13 +13,8 @@ public class ModerationBot extends ListenerAdapter {
     public JDA jda;
     private String moderationLog;
 
-    public ModerationBot(String token, String logChannel) throws InterruptedException {
-        jda = JDABuilder.createLight(token,
-                        GatewayIntent.GUILD_MESSAGES,
-                        GatewayIntent.MESSAGE_CONTENT,
-                        GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(this)
-                .build().awaitReady();
+    public ModerationBot(String logChannel) {
+        jda = Main.jda;
         Main.LOG("ModerationBot Constructor");
         moderationLog = logChannel;
     }
@@ -37,24 +30,24 @@ public class ModerationBot extends ListenerAdapter {
             member.modifyNickname(null).queue();
         } else if (checkName == 2) {
             event.getGuild().getTextChannelById(moderationLog)
-                    .sendMessage("⚠️ Fremdwerbung im Nickname erkannt: `"+ member.getNickname() + "` bei " + member.getUser().getAsMention())
-                                .queue();
+                    .sendMessage("⚠️ Fremdwerbung im Nickname erkannt: `" + member.getNickname() + "` bei " + member.getUser().getAsMention())
+                    .queue();
             member.modifyNickname(null).queue();
         } else if (checkName == 3) {
             event.getGuild().getTextChannelById(moderationLog)
                     .sendMessage("⚠️ Verdächtiger Nickname erkannt: `"
-                                        + member.getNickname() + "` bei " + member.getUser().getAsMention())
-                                .queue();
+                            + member.getNickname() + "` bei " + member.getUser().getAsMention())
+                    .queue();
         }
     }
 
-/*
-* Return values
-* 1: Illegal name with blockedWords
-* 2: contains a link
-* 3: contains non-roman characters
-* 0: clean name
-*/
+    /*
+     * Return values
+     * 1: Illegal name with blockedWords
+     * 2: contains a link
+     * 3: contains non-roman characters
+     * 0: clean name
+     */
     public int isNicknameSuspicious(String nickname) {
         if (nickname == null) return 0;
 

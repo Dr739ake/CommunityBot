@@ -12,16 +12,19 @@ public class ServerData {
     public String channelId;
     public Message lastCountMessage;
     private File file;
+
     public ServerData(String guildId) {
         curNum = 0;
         highScore = 0;
         lastUser = "";
         file = new File("data/" + guildId + ".json");
 
-        {File d = new File("data");
-        if (!d.exists()) {
-            d.mkdir();
-        }}
+        {
+            File d = new File("data");
+            if (!d.exists()) {
+                d.mkdir();
+            }
+        }
 
         if (file.exists()) {
             String jsonString;

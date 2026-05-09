@@ -3,7 +3,6 @@ package de.jns.countingbot;
 import de.jns.Main;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
@@ -16,7 +15,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.internal.entities.emoji.UnicodeEmojiImpl;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,13 +30,8 @@ public class CountingBot extends ListenerAdapter {
     public JDA jda;
     private boolean bRememberLastCountMessage;
 
-    public CountingBot(String token) throws InterruptedException {
-        jda = JDABuilder.createLight(token,
-                        GatewayIntent.GUILD_MESSAGES,
-                        GatewayIntent.MESSAGE_CONTENT,
-                        GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(this)
-                .build().awaitReady();
+    public CountingBot() {
+        jda = Main.jda;
         Main.LOG("CountingBot Constructor");
     }
 
@@ -46,7 +39,7 @@ public class CountingBot extends ListenerAdapter {
     public void onMessageDelete(@NotNull MessageDeleteEvent event) {
         ServerData serverData = data.get(event.getGuild().getId());
         if (serverData == null) return;
-        if(event.getChannel().getId().equals(serverData.channelId) && event.getMessageId().equals(serverData.lastCountMessage.getId())) {
+        if (event.getChannel().getId().equals(serverData.channelId) && event.getMessageId().equals(serverData.lastCountMessage.getId())) {
             event.getChannel().sendMessage(serverData.lastCountMessage.getContentRaw()).queue();
         }
     }
@@ -55,10 +48,10 @@ public class CountingBot extends ListenerAdapter {
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         ServerData serverData = data.get(event.getGuild().getId());
         if (serverData == null) return;
-        if(event.getAuthor().equals(jda.getSelfUser()) && serverData.lastCountMessage != null && event.getMessage().getContentRaw().equals(serverData.lastCountMessage.getContentRaw())) {
+        if (!event.getAuthor().isBot() && serverData.lastCountMessage != null && event.getMessage().getContentRaw().equals(serverData.lastCountMessage.getContentRaw())) {
             String sReaction = "✅";
 
-            if(event.getMessage().getContentRaw().equals(Integer.toString(serverData.highScore))) {
+            if (event.getMessage().getContentRaw().equals(Integer.toString(serverData.highScore))) {
                 sReaction = "\uD83C\uDFC6";
             }
 
@@ -131,13 +124,13 @@ public class CountingBot extends ListenerAdapter {
             reset(serverData);
         } else if (number == (serverData.curNum + 1)) {
 
-            if(event.getMember().hasPermission(Permission.ADMINISTRATOR))
+            if (event.getMember().hasPermission(Permission.ADMINISTRATOR))
                 bRememberLastCountMessage = true;
 
             serverData.curNum = number;
             serverData.lastUser = event.getAuthor().getId();
 
-            if(bRememberLastCountMessage) {
+            if (bRememberLastCountMessage) {
                 serverData.lastCountMessage = event.getMessage();
             }
 
@@ -263,7 +256,7 @@ public class CountingBot extends ListenerAdapter {
 
                 channel.getIterableHistory().takeAsync(100).thenAccept(messages -> {
                     for (Message message : messages) {
-                        if(message.getId().equals(serverData.lastCountMessage.getId())) {
+                        if (message.getId().equals(serverData.lastCountMessage.getId())) {
                             break;
                         }
                         message.delete().queue();
@@ -272,16 +265,16 @@ public class CountingBot extends ListenerAdapter {
 
                 try {
 
-                ServerData backup = dataBackup.get(event.getGuild().getId());
+                    ServerData backup = dataBackup.get(event.getGuild().getId());
 
-                serverData.curNum = Integer.parseInt(backup.lastCountMessage.getContentRaw());
-                serverData.lastUser = backup.lastCountMessage.getAuthor().getId();
-                serverData.save();
+                    serverData.curNum = Integer.parseInt(backup.lastCountMessage.getContentRaw());
+                    serverData.lastUser = backup.lastCountMessage.getAuthor().getId();
+                    serverData.save();
 
-                event.getChannel().sendMessage("Die aktuelle Zahl lautet: " + serverData.curNum).queue();
+                    event.getChannel().sendMessage("Die aktuelle Zahl lautet: " + serverData.curNum).queue();
                 } catch (Exception e) {
-                    Main.LOG( "This shit did not work as intented, BUT it still banned the User" );
-                    Main.LOG( "Exception: " );
+                    Main.LOG("This shit did not work as intented, BUT it still banned the User");
+                    Main.LOG("Exception: ");
                     e.printStackTrace();
                 }
 

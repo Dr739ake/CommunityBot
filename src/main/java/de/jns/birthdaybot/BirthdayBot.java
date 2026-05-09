@@ -2,13 +2,11 @@ package de.jns.birthdaybot;
 
 import de.jns.Main;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.ResultSet;
@@ -22,11 +20,8 @@ import java.util.concurrent.TimeUnit;
 public class BirthdayBot extends ListenerAdapter {
     public JDA jda;
 
-    public BirthdayBot(String token, String channelId) throws SQLException, InterruptedException {
-        jda = JDABuilder.createLight(token,
-                        GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(this)
-                .build().awaitReady();
+    public BirthdayBot(String channelId) throws SQLException, InterruptedException {
+        jda = Main.jda;
         Main.LOG("BirthdayBot Constructor");
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -36,7 +31,7 @@ public class BirthdayBot extends ListenerAdapter {
                 executeFunction(jda, channelId);
             }
         };
-        scheduler.scheduleAtFixedRate(dailyTask, 0,1, TimeUnit.HOURS);
+        scheduler.scheduleAtFixedRate(dailyTask, 0, 1, TimeUnit.HOURS);
     }
 
     private static void executeFunction(JDA jda, String channelId) {
@@ -64,15 +59,15 @@ public class BirthdayBot extends ListenerAdapter {
         }
         StringBuilder message = new StringBuilder();
         if (birthday_people.size() == 1) {
-            message.append(":tada: :partying_face: :tada: <@"+birthday_people.get(0)+"> hat heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+            message.append(":tada: :partying_face: :tada: <@" + birthday_people.get(0) + "> hat heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
         } else if (birthday_people.size() == 2) {
-            message.append(":tada: :partying_face: :tada: <@"+birthday_people.get(0)+"> und <@" + birthday_people.get(1) + "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+            message.append(":tada: :partying_face: :tada: <@" + birthday_people.get(0) + "> und <@" + birthday_people.get(1) + "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
         } else if (birthday_people.size() > 1) {
             message.append(":tada: :partying_face: :tada: ");
-            for(int i = 0; i < birthday_people.size() -2; i++) {
-                message.append("<@"+birthday_people.get(i)+">, ");
+            for (int i = 0; i < birthday_people.size() - 2; i++) {
+                message.append("<@" + birthday_people.get(i) + ">, ");
             }
-            message.append("<@"+birthday_people.get( birthday_people.size()-2 )+">, und <@" + birthday_people.get( birthday_people.size()-1 )+ "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
+            message.append("<@" + birthday_people.get(birthday_people.size() - 2) + ">, und <@" + birthday_people.get(birthday_people.size() - 1) + "> haben heute Geburtstag! Alles Gute! :tada: :partying_face: :tada: ");
         }
         if (!message.isEmpty()) {
             if (textChannelById != null) {
@@ -80,8 +75,8 @@ public class BirthdayBot extends ListenerAdapter {
             }
             Main.LOG(message.toString());
         }
-        for(String id : birthday_people) {
-            Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 1 WHERE id = "+id+";");
+        for (String id : birthday_people) {
+            Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 1 WHERE id = " + id + ";");
         }
     }
 
@@ -135,6 +130,6 @@ public class BirthdayBot extends ListenerAdapter {
 
     @Override
     public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
-        Main.ExecuteQuery_NOLOG("DELETE FROM birthday_days WHERE id = "+event.getUser().getId()+";");
+        Main.ExecuteQuery_NOLOG("DELETE FROM birthday_days WHERE id = " + event.getUser().getId() + ";");
     }
 }

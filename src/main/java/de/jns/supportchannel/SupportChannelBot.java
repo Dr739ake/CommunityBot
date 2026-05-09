@@ -2,7 +2,6 @@ package de.jns.supportchannel;
 
 import de.jns.Main;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -13,20 +12,12 @@ import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.jetbrains.annotations.NotNull;
 
-import java.sql.ResultSet;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-class SupportChannelBLOB {
-    public VoiceChannel vc;
-    public TextChannel ping;
-    public Role role;
-};
 
 public class SupportChannelBot extends ListenerAdapter {
     public JDA jda;
@@ -35,28 +26,18 @@ public class SupportChannelBot extends ListenerAdapter {
     private Map<String, VoiceChannel> activeVoiceChannel;
     private Map<String, Long> joinCooldown;
 
-    public SupportChannelBot(String token) throws Exception {
-        jda = JDABuilder.createDefault(token)
-                .enableIntents(GatewayIntent.GUILD_MEMBERS)
-                .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
-                .addEventListeners(this)
-                .build()
-        .awaitReady();
+    public SupportChannelBot() {
+        jda = Main.jda;
 
         knownSupportChannels = new HashMap<>();
         activeVoiceChannel = new HashMap<>();
         joinCooldown = new HashMap<>();
 
-        ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM supportchannels");
-        while (resultSet.next())
-        {
-            SupportChannelBLOB blob = new SupportChannelBLOB();
-            blob.vc = jda.getVoiceChannelById(resultSet.getString(1));
-            blob.ping = jda.getTextChannelById(resultSet.getString(2));
-            blob.role = jda.getRoleById(resultSet.getString(3));
-            knownSupportChannels.put(blob.vc.getId(), blob);
-        }
         Main.LOG("SupportChannel Constructor");
+    }
+
+    public void AddKnownChannel(String key, SupportChannelBLOB blob) {
+        knownSupportChannels.put(key, blob);
     }
 
     @Override
@@ -65,14 +46,12 @@ public class SupportChannelBot extends ListenerAdapter {
         Member executor = event.getMember();
         event.deferReply(true).queue();
 
-        if (executor == null || !executor.hasPermission(Permission.ADMINISTRATOR))
-        {
+        if (executor == null || !executor.hasPermission(Permission.ADMINISTRATOR)) {
             event.getHook().sendMessage("Keine Berechtigung.").queue();
             return;
         }
 
-        if (command.equals("setsupportchannel"))
-        {
+        if (command.equals("setsupportchannel")) {
             VoiceChannel voiceChannel = Objects.requireNonNull(event.getInteraction().getOption("vc")).getAsChannel().asVoiceChannel();
             TextChannel textChannel = Objects.requireNonNull(event.getInteraction().getOption("ping")).getAsChannel().asTextChannel();
             Role role = Objects.requireNonNull(event.getInteraction().getOption("role")).getAsRole();
@@ -86,7 +65,7 @@ public class SupportChannelBot extends ListenerAdapter {
 
             String query = "INSERT INTO supportchannels (channelId, pingChannelId, roleId) VALUES ( '" + voiceChannel.getId() + "', '" + textChannel.getId() + "', '" + role.getId() + "' ) ON DUPLICATE KEY UPDATE pingChannelId = VALUES(pingChannelId), roleId = VALUES(roleId);";
             Main.ExecuteQuery(query);
-            event.getHook().sendMessage( role.getAsMention() + " wird nun in " + textChannel.getAsMention() + " gepingt, wenn ein User " + voiceChannel.getAsMention() + " betritt.").queue();
+            event.getHook().sendMessage(role.getAsMention() + " wird nun in " + textChannel.getAsMention() + " gepingt, wenn ein User " + voiceChannel.getAsMention() + " betritt.").queue();
         }
     }
 

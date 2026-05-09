@@ -6,11 +6,15 @@ import de.jns.countingbot.ServerData;
 import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
+import de.jns.supportchannel.SupportChannelBLOB;
 import de.jns.supportchannel.SupportChannelBot;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import java.io.*;
 import java.sql.*;
@@ -23,7 +27,9 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static String VERSION_NUMBER = "v1.5.0";
+    public static JDA jda;
+
+    public static String VERSION_NUMBER = "v1.5.1";
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
@@ -60,6 +66,7 @@ public class Main {
         }
         return resultSet;
     }
+
     public static ResultSet ExecuteQuery(String query) {
         Statement statement;
         ResultSet resultSet = null;
@@ -111,36 +118,88 @@ public class Main {
         properties = new Properties();
         properties.load(new FileInputStream(PROPERTIES_FILE));
 
-        try{
+        try {
             rollenBot = setupRollenmeister();
         } catch (Exception e) {
             System.out.println("rollenBot failed to start: " + e.getMessage());
         }
-        try{
+        try {
             multiBanBot = setupMultiBan();
         } catch (Exception e) {
             System.out.println("multiBanBot failed to start: " + e.getMessage());
         }
-        try{
+        try {
             countingBot = setupCountingBot();
         } catch (Exception e) {
             System.out.println("countingBot failed to start: " + e.getMessage());
         }
-        try{
+        try {
             birthdayBot = setupBirthdayBot();
         } catch (Exception e) {
             System.out.println("birthdayBot failed to start: " + e.getMessage());
         }
-        try{
+        try {
             moderationBot = setupModerationBot(properties.getProperty("moderationLog"));
         } catch (Exception e) {
             System.out.println("moderationBot failed to start: " + e.getMessage());
         }
 
-        try{
+        try {
             supportChannelBot = setupSupportChannelBot();
         } catch (Exception e) {
             System.out.println("supportChannelBot failed to start: " + e.getMessage());
+        }
+
+        jda = JDABuilder.createDefault(properties.getProperty("token"))
+                .enableIntents(GatewayIntent.GUILD_MEMBERS)
+                .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
+                .enableIntents(GatewayIntent.GUILD_MESSAGES)
+                .enableIntents(GatewayIntent.MESSAGE_CONTENT)
+
+                .addEventListeners(countingBot)
+                .addEventListeners(moderationBot)
+                .addEventListeners(rollenBot)
+                .addEventListeners(multiBanBot)
+                .addEventListeners(birthdayBot)
+                .addEventListeners(supportChannelBot)
+                .build().awaitReady();
+
+        // CountingBot Stuff
+        {
+            for (Guild guild : jda.getGuilds()) {
+                ServerData serverData = new ServerData(guild.getId());
+                CountingBot.data.put(guild.getId(), serverData);
+
+                addCommands(guild, (serverData.channelId != null && !serverData.channelId.isEmpty()));
+            }
+        }
+
+        // RollenBot Stuff
+        {
+            for (Guild guild : jda.getGuilds()) {
+                addCommands(guild, false);
+                ExecuteQuery("INSERT IGNORE INTO servers (id) VALUES ('" + guild.getId() + "');");
+            }
+            // Load LogChannels from Database into Hashmap
+            ResultSet resultSet = ExecuteQuery("SELECT * FROM servers;");
+            while (resultSet.next()) {
+                logChannels.put(resultSet.getString(1), resultSet.getString(2));
+                String roleId = resultSet.getString(3);
+                if (roleId != null)
+                    adminRoles.put(resultSet.getString(1), jda.getRoleById(roleId));
+            }
+        }
+
+        // SupportChannel Stuff
+        {
+            ResultSet resultSet = Main.ExecuteQuery("SELECT * FROM supportchannels");
+            while (resultSet.next()) {
+                SupportChannelBLOB blob = new SupportChannelBLOB();
+                blob.vc = jda.getVoiceChannelById(resultSet.getString(1));
+                blob.ping = jda.getTextChannelById(resultSet.getString(2));
+                blob.role = jda.getRoleById(resultSet.getString(3));
+                supportChannelBot.AddKnownChannel(blob.vc.getId(), blob);
+            }
         }
 
         System.out.println("Bot-Version: " + VERSION_NUMBER);
@@ -150,22 +209,12 @@ public class Main {
             String in = sc.nextLine();
             if (in.equals("restart")) {
                 LOG("restarting...");
-                rollenBot.jda.shutdown();
-                multiBanBot.jda.shutdown();
-                countingBot.jda.shutdown();
-                birthdayBot.jda.shutdown();
-                moderationBot.jda.shutdown();
-                supportChannelBot.jda.shutdown();
+                jda.shutdown();
                 running = false;
                 main(null);
             } else if (in.equals("stop")) {
                 LOG("stopping...");
-                rollenBot.jda.shutdown();
-                multiBanBot.jda.shutdown();
-                countingBot.jda.shutdown();
-                birthdayBot.jda.shutdown();
-                moderationBot.jda.shutdown();
-                supportChannelBot.jda.shutdown();
+                jda.shutdown();
                 running = false;
             } else {
                 LOG("Unknown Command");
@@ -176,68 +225,38 @@ public class Main {
     }
 
     public static BirthdayBot setupBirthdayBot() throws Exception {
-        String token = properties.getProperty("token");
         String channelId = properties.getProperty("birthdayChannel");
-        BirthdayBot bot = new BirthdayBot(token, channelId);
+        BirthdayBot bot = new BirthdayBot(channelId);
 
-        String[] createTableQuerys = {
-            "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT );",
-            "CREATE TABLE IF NOT EXISTS birthday_server_conf ( server_id VARCHAR(255) PRIMARY KEY, textChannelId VARCHAR(255) );"
+        String[] createTableQuery = {
+                "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT );",
+                "CREATE TABLE IF NOT EXISTS birthday_server_conf ( server_id VARCHAR(255) PRIMARY KEY, textChannelId VARCHAR(255) );"
         };
 
         // Load and register MariaDB JDBC driver (optional in recent versions)
         Class.forName("org.mariadb.jdbc.Driver");
         Main.LOG("Connected to MariaDB!");
 
-        for (String q : createTableQuerys) {
+        for (String q : createTableQuery) {
             ExecuteQuery(q);
         }
-
-        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
-        LOG("Bot Ready, should be ONLINE");
-        LOG("Token: " + token);
-
         return bot;
     }
 
-    public static ModerationBot setupModerationBot(String moderationLogChannelname) throws Exception {
-        String token = properties.getProperty("token");
-        ModerationBot bot = new ModerationBot(token, moderationLogChannelname);
-
-        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
-        LOG("Bot Ready, should be ONLINE");
-        LOG("Token: " + token);
-
-        return bot;
+    public static ModerationBot setupModerationBot(String moderationLogChannelname) {
+        return new ModerationBot(moderationLogChannelname);
     }
 
-    public static SupportChannelBot setupSupportChannelBot() throws Exception {
-        String token = properties.getProperty("token");
-        SupportChannelBot bot = new SupportChannelBot(token);
-
-        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
-        LOG("Bot Ready, should be ONLINE");
-        LOG("Token: " + token);
-
-        return bot;
+    public static SupportChannelBot setupSupportChannelBot() {
+        return new SupportChannelBot();
     }
 
     public static MultiBanBot setupMultiBan() throws Exception {
         MultiBanBot.communitys = MultiBanBot.readMapFromJsonFile(MultiBanBot.JSON_FILE);
-
-        String token = properties.getProperty("token");
-
-        MultiBanBot bot = new MultiBanBot(token);
-
-        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
-        LOG("Bot Ready, should be ONLINE");
-        LOG("Token: " + token);
-
-        return bot;
+        return new MultiBanBot();
     }
 
     public static RollenBot setupRollenmeister() throws Exception {
-        String token = properties.getProperty("token");
         try {
             devMode = Boolean.parseBoolean(properties.getProperty("devMode"));
             if (devMode) {
@@ -263,31 +282,10 @@ public class Main {
             ExecuteQuery(q);
         }
 
-        RollenBot bot = new RollenBot(token);
-
-        for (Guild guild : bot.jda.getGuilds()) {
-            addCommands(guild, false);
-            ExecuteQuery("INSERT IGNORE INTO servers (id) VALUES ('" + guild.getId() + "');");
-        }
-
-        // Load LogChannels from Database into Hashmap
-        ResultSet resultSet = ExecuteQuery("SELECT * FROM servers;");
-        while (resultSet.next()) {
-            logChannels.put(resultSet.getString(1), resultSet.getString(2));
-            String roleId = resultSet.getString(3);
-            if (roleId != null)
-                adminRoles.put(resultSet.getString(1), bot.jda.getRoleById(roleId));
-        }
-
-        LOG("BOT-NAME: " + bot.jda.getSelfUser().getName());
-        LOG("Bot Ready, should be ONLINE");
-        LOG("Token: " + token);
-
-        return bot;
+        return new RollenBot();
     }
 
-    public static CountingBot setupCountingBot() throws Exception {
-        String token = properties.getProperty("token");
+    public static CountingBot setupCountingBot() {
         try {
             devMode = Boolean.parseBoolean(properties.getProperty("devMode"));
             if (devMode) {
@@ -297,16 +295,7 @@ public class Main {
             devMode = false;
         }
 
-        CountingBot bot = new CountingBot(token);
-
-        for(Guild guild: bot.jda.getGuilds()) {
-
-            ServerData serverData = new ServerData(guild.getId());
-            CountingBot.data.put(guild.getId(), serverData);
-
-            addCommands(guild, (serverData.channelId != null && !serverData.channelId.isEmpty()));
-        }
-        return bot;
+        return new CountingBot();
     }
 
     public static void addCommands(Guild guild, boolean countingBotSetup) {
