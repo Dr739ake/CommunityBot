@@ -84,7 +84,7 @@ public class BirthdayBot extends ListenerAdapter {
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         String command = event.getName();
         Member executor = event.getMember();
-        event.deferReply(true).queue();
+        //event.deferReply(true).queue();
         if (executor != null) {
             switch (command) {
                 case "geburtstageintragen": {

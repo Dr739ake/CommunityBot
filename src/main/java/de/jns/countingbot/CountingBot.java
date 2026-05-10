@@ -316,7 +316,6 @@ public class CountingBot extends ListenerAdapter {
                         Commands.slash("resetrun", "Setzt den aktuellen Durchlauf zurück")
                 ).queue();
             }
-            default -> event.getHook().sendMessage("unknown command").queue();
         }
     }
 

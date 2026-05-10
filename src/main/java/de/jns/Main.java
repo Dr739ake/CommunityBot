@@ -3,6 +3,7 @@ package de.jns;
 import de.jns.birthdaybot.BirthdayBot;
 import de.jns.countingbot.CountingBot;
 import de.jns.countingbot.ServerData;
+import de.jns.gitlabissues.GitLabIssueCreator;
 import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
 import de.jns.rollenmeister.RollenBot;
@@ -29,7 +30,7 @@ public class Main {
 
     public static JDA jda;
 
-    public static String VERSION_NUMBER = "v1.5.1";
+    public static String VERSION_NUMBER = "v1.5.2";
 
     public static boolean devMode;
     public static HashMap<String, String> logChannels = new HashMap<>();
@@ -97,6 +98,7 @@ public class Main {
     static BirthdayBot birthdayBot;
     static ModerationBot moderationBot;
     static SupportChannelBot supportChannelBot;
+    static GitLabIssueCreator issueCreator;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -150,12 +152,18 @@ public class Main {
             System.out.println("supportChannelBot failed to start: " + e.getMessage());
         }
 
+        try {
+            issueCreator = new GitLabIssueCreator(properties.getProperty("gitlabUrl"), properties.getProperty("gitlabToken"));
+        } catch (Exception e) {
+            System.out.println("issueCreator failed to start: " + e.getMessage());
+        }
+
         jda = JDABuilder.createDefault(properties.getProperty("token"))
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
                 .enableIntents(GatewayIntent.GUILD_MESSAGES)
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT)
-
+                .addEventListeners(issueCreator)
                 .addEventListeners(countingBot)
                 .addEventListeners(moderationBot)
                 .addEventListeners(rollenBot)
@@ -387,9 +395,13 @@ public class Main {
                     ,
                     /// SupportChannel ///
                     Commands.slash("setsupportchannel", "Verbinde einen VoiceChannel mit einer Rolle.")
-                            .addOption(OptionType.CHANNEL, "channel", "Voice-Channel", true)
+                            .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
+                            .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
+                            .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
+                    ,
+                    /// Gitlab Issues ///
+                    Commands.slash("sendissueembed", "Verbinde einen VoiceChannel mit einer Rolle.")
                             .addOption(OptionType.CHANNEL, "channel", "Ping-Channel", true)
-                            .addOption(OptionType.ROLE, "rolle", "Team-Rolle die gepingt werden soll.", true)
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -472,6 +484,10 @@ public class Main {
                             .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
                             .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
+                    ,
+                    /// Gitlab Issues ///
+                    Commands.slash("sendissueembed", "Verbinde einen VoiceChannel mit einer Rolle.")
+                            .addOption(OptionType.CHANNEL, "channel", "Ping-Channel", true)
             ).queue();
         }
     }

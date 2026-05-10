@@ -44,7 +44,6 @@ public class SupportChannelBot extends ListenerAdapter {
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         String command = event.getName();
         Member executor = event.getMember();
-        event.deferReply(true).queue();
 
         if (executor == null || !executor.hasPermission(Permission.ADMINISTRATOR)) {
             event.getHook().sendMessage("Keine Berechtigung.").queue();
