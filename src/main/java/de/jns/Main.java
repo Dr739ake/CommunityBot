@@ -3,10 +3,10 @@ package de.jns;
 import de.jns.birthdaybot.BirthdayBot;
 import de.jns.countingbot.CountingBot;
 import de.jns.countingbot.ServerData;
+import de.jns.dbtranslator.RoleManagerDB;
 import de.jns.gitlabissues.GitLabIssueCreator;
 import de.jns.moderation.ModerationBot;
 import de.jns.multiban.MultiBanBot;
-import de.jns.rollenmeister.RollenBot;
 import de.jns.supportchannel.SupportChannelBLOB;
 import de.jns.supportchannel.SupportChannelBot;
 import net.dv8tion.jda.api.JDA;
@@ -20,20 +20,28 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import java.io.*;
 import java.sql.*;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class Main {
 
     public static JDA jda;
+    public static GGCListenerAdapter commandListener = new GGCListenerAdapter();
 
     public static String VERSION_NUMBER = "v1.5.2-dirty";
+    private static int issueCreatorRetryCounter = 0;
 
     public static boolean devMode;
+    public static boolean isSQLite = false;
     public static HashMap<String, String> logChannels = new HashMap<>();
     public static HashMap<String, Role> adminRoles = new HashMap<>();
+
     static Properties properties;
     static final String PROPERTIES_FILE = "ggc.properties";
 
@@ -45,54 +53,71 @@ public class Main {
     }
 
     public static ResultSet ExecuteQuery_NOLOG(String query) {
-        Statement statement;
-        ResultSet resultSet = null;
-        try {
-            // Database credentials
-            String url = "jdbc:mariadb://" + properties.getProperty("db-ip") + ":" + properties.getProperty("db-port") + "/" + properties.getProperty("database");
-            String username = properties.getProperty("username");
-            String password = properties.getProperty("password");
-
-            // Establish the connection
-            Connection connection = DriverManager.getConnection(url, username, password);
-
-            // Begin Request
-            connection.beginRequest();
-            statement = connection.createStatement();
-            resultSet = statement.executeQuery(query);
-            connection.endRequest();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return resultSet;
+        System.out.println(query);
+        return _ExecuteQuery(query, false);
     }
 
     public static ResultSet ExecuteQuery(String query) {
+        System.out.println(query);
+        return _ExecuteQuery(query, true);
+    }
+
+    private static ResultSet _ExecuteQuery(String query, boolean log) {
         Statement statement;
         ResultSet resultSet = null;
         try {
-            // Database credentials
-            String url = "jdbc:mariadb://" + properties.getProperty("db-ip") + ":" + properties.getProperty("db-port") + "/" + properties.getProperty("database");
-            String username = properties.getProperty("username");
-            String password = properties.getProperty("password");
+            String dbType = properties.getProperty("db-type", "sqlite");
 
-            // Establish the connection
-            Connection connection = DriverManager.getConnection(url, username, password);
+            if (dbType.equals("sqlite")) {
+                String database = properties.getProperty("database", "bot");
+                String url = "jdbc:sqlite:" + database + ".db";
 
-            // Begin Request
-            connection.beginRequest();
-            statement = connection.createStatement();
-            resultSet = statement.executeQuery(query);
-            Main.LOG(query);
-            connection.endRequest();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
+                // Load SQLite JDBC driver
+                Class.forName("org.sqlite.JDBC");
+
+                try {
+                    Connection connection = DriverManager.getConnection(url);
+
+                    // Begin Request
+                    statement = connection.createStatement();
+                    resultSet = statement.executeQuery(query);
+                    if (log) {
+                        Main.LOG(query);
+                    }
+                    connection.close();
+                } catch (SQLException e) {
+                    return null;
+                }
+            } else {
+                // MariaDB connection (existing logic)
+                String url = "jdbc:mariadb://" + properties.getProperty("db-ip") + ":" +
+                        properties.getProperty("db-port") + "/" + properties.getProperty("database");
+                String username = properties.getProperty("username");
+                String password = properties.getProperty("password");
+
+                try {
+                    Connection connection = DriverManager.getConnection(url, username, password);
+                    // Begin Request
+                    connection.beginRequest();
+                    statement = connection.createStatement();
+                    statement.executeQuery(query);
+                    resultSet = statement.getResultSet();
+                    if (log) {
+                        Main.LOG(query);
+                    }
+                    connection.endRequest();
+                } catch (SQLException e) {
+                    return null;
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
         return resultSet;
     }
 
     static MultiBanBot multiBanBot;
-    static RollenBot rollenBot;
+    static RoleManager rollenBot;
     static CountingBot countingBot;
     static BirthdayBot birthdayBot;
     static ModerationBot moderationBot;
@@ -104,6 +129,7 @@ public class Main {
             BufferedWriter br = new BufferedWriter(new FileWriter(PROPERTIES_FILE));
             br.write("token=none\n");
             br.write("devMode=false\n");
+            br.write("db-type=sqlite\n");
             br.write("db-ip=none\n");
             br.write("db-port=3306\n");
             br.write("username=none\n");
@@ -119,12 +145,16 @@ public class Main {
         properties = new Properties();
         properties.load(new FileInputStream(PROPERTIES_FILE));
 
+        isSQLite = properties.getProperty("db-type", "sqlite").equals("sqlite");
+
         jda = JDABuilder.createDefault(properties.getProperty("token"))
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
                 .enableIntents(GatewayIntent.GUILD_MESSAGES)
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build().awaitReady();
+
+        jda.addEventListener(commandListener);
 
         List<ListenerAdapter> listenerAdaptersList = setupListenerAdapters();
 
@@ -146,7 +176,7 @@ public class Main {
                     }
                 }
             }
-            Thread.sleep(1000);
+            Thread.sleep(Duration.ofSeconds(10).toMillis());
         }
     }
 
@@ -154,31 +184,24 @@ public class Main {
     {
         boolean r = false;
         if (multiBanBot == null) {
-            System.out.println("multiBanBot is not loaded yet");
             r = true;
         }
         if (rollenBot == null) {
-            System.out.println("rollenBot is not loaded yet");
             r = true;
         }
         if (countingBot == null) {
-            System.out.println("countingBot is not loaded yet");
             r = true;
         }
         if (birthdayBot == null) {
-            System.out.println("birthdayBot is not loaded yet");
             r = true;
         }
         if (moderationBot == null) {
-            System.out.println("moderationBot is not loaded yet");
             r = true;
         }
         if (supportChannelBot == null) {
-            System.out.println("supportChannelBot is not loaded yet");
             r = true;
         }
         if (issueCreator == null) {
-            System.out.println("issueCreator is not loaded yet");
             r = true;
         }
         return r;
@@ -195,7 +218,11 @@ public class Main {
                 // RollenBot Stuff
                 for (Guild guild : jda.getGuilds()) {
                     addCommands(guild, false);
-                    ExecuteQuery("INSERT IGNORE INTO servers (id) VALUES ('" + guild.getId() + "');");
+                    if (isSQLite) {
+                        ExecuteQuery("INSERT OR IGNORE INTO servers (id) VALUES ('" + guild.getId() + "');");
+                    } else {
+                        ExecuteQuery("INSERT IGNORE INTO servers (id) VALUES ('" + guild.getId() + "');");
+                    }
                 }
                 // Load LogChannels from Database into Hashmap
                 ResultSet resultSet = ExecuteQuery("SELECT * FROM servers;");
@@ -206,7 +233,7 @@ public class Main {
                         adminRoles.put(resultSet.getString(1), jda.getRoleById(roleId));
                 }
             } catch (Exception e) {
-                System.out.println("rollenBot failed to start: " + e.getMessage());
+                Main.LOG("rollenBot failed to start: " + e.getMessage());
             }
         }
 
@@ -215,7 +242,7 @@ public class Main {
                 multiBanBot = setupMultiBan();
                 listenerAdaptersList.add(multiBanBot);
             } catch (Exception e) {
-                System.out.println("multiBanBot failed to start: " + e.getMessage());
+                Main.LOG("multiBanBot failed to start: " + e.getMessage());
             }
         }
 
@@ -231,7 +258,7 @@ public class Main {
                     addCommands(guild, (serverData.channelId != null && !serverData.channelId.isEmpty()));
                 }
             } catch (Exception e) {
-                System.out.println("countingBot failed to start: " + e.getMessage());
+                Main.LOG("countingBot failed to start: " + e.getMessage());
             }
         }
 
@@ -240,7 +267,7 @@ public class Main {
                 birthdayBot = setupBirthdayBot();
                 listenerAdaptersList.add(birthdayBot);
             } catch (Exception e) {
-                System.out.println("birthdayBot failed to start: " + e.getMessage());
+                Main.LOG("birthdayBot failed to start: " + e.getMessage());
             }
         }
 
@@ -249,7 +276,7 @@ public class Main {
                 moderationBot = setupModerationBot(properties.getProperty("moderationLog"));
                 listenerAdaptersList.add(moderationBot);
             } catch (Exception e) {
-                System.out.println("moderationBot failed to start: " + e.getMessage());
+                Main.LOG("moderationBot failed to start: " + e.getMessage());
             }
         }
 
@@ -268,16 +295,18 @@ public class Main {
                     supportChannelBot.AddKnownChannel(blob.vc.getId(), blob);
                 }
             } catch (Exception e) {
-                System.out.println("supportChannelBot failed to start: " + e.getMessage());
+                Main.LOG("supportChannelBot failed to start: " + e.getMessage());
             }
         }
 
-        if (issueCreator == null) {
+        if (issueCreator == null && issueCreatorRetryCounter < 1) {
             try {
-                issueCreator = new GitLabIssueCreator(properties.getProperty("gitlabUrl"), properties.getProperty("gitlabToken"));
-                listenerAdaptersList.add(issueCreator);
+                issueCreator = setupGitLabIssueCreator();
+                if (issueCreator != null) {
+                    listenerAdaptersList.add(issueCreator);
+                }
             } catch (Exception e) {
-                System.out.println("issueCreator failed to start: " + e.getMessage());
+                Main.LOG("issueCreator failed to start: " + e.getMessage());
             }
         }
         return listenerAdaptersList;
@@ -287,14 +316,23 @@ public class Main {
         String channelId = properties.getProperty("birthdayChannel");
         BirthdayBot bot = new BirthdayBot(channelId);
 
-        String[] createTableQuery = {
-                "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT );",
+        String[] createTableQueryMariaDB = {
+                "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT, was_celebrated INT);",
                 "CREATE TABLE IF NOT EXISTS birthday_server_conf ( server_id VARCHAR(255) PRIMARY KEY, textChannelId VARCHAR(255) );"
         };
 
-        // Load and register MariaDB JDBC driver (optional in recent versions)
-        Class.forName("org.mariadb.jdbc.Driver");
-        Main.LOG("Connected to MariaDB!");
+        String[] createTableQuerySQLite = {
+                "CREATE TABLE IF NOT EXISTS birthday_days ( id VARCHAR(255) PRIMARY KEY, day INT, month INT, was_celebrated INT);",
+                "CREATE TABLE IF NOT EXISTS birthday_server_conf ( server_id VARCHAR(255) PRIMARY KEY, textChannelId VARCHAR(255) );"
+        };
+
+        String[] createTableQuery;
+
+        if (isSQLite) {
+            createTableQuery = createTableQuerySQLite;
+        } else {
+            createTableQuery = createTableQueryMariaDB;
+        }
 
         for (String q : createTableQuery) {
             ExecuteQuery(q);
@@ -310,12 +348,23 @@ public class Main {
         return new SupportChannelBot();
     }
 
+    public static GitLabIssueCreator setupGitLabIssueCreator() {
+        GitLabIssueCreator bot = null;
+        try {
+            bot = new  GitLabIssueCreator(properties.getProperty("gitlabUrl"), properties.getProperty("gitlabToken"));
+        }  catch (Exception e) {
+            Main.LOG("setupGitLabIssueCreator failed: " + e.getMessage());
+            issueCreatorRetryCounter++;
+        }
+        return bot;
+    }
+
     public static MultiBanBot setupMultiBan() throws Exception {
         MultiBanBot.communitys = MultiBanBot.readMapFromJsonFile(MultiBanBot.JSON_FILE);
         return new MultiBanBot();
     }
 
-    public static RollenBot setupRollenmeister() throws Exception {
+    public static RoleManager setupRollenmeister() throws Exception {
         try {
             devMode = Boolean.parseBoolean(properties.getProperty("devMode"));
             if (devMode) {
@@ -324,24 +373,8 @@ public class Main {
         } catch (Exception e) {
             devMode = false;
         }
-
-        String[] createTableQuerys = {
-                "CREATE TABLE IF NOT EXISTS servers ( id varchar(255) PRIMARY KEY, logchannel varchar(255), admin_role varchar(255) );",
-                "CREATE TABLE IF NOT EXISTS groups ( id INT PRIMARY KEY AUTO_INCREMENT, name varchar(255) NOT NULL, serverId varchar(255), FOREIGN KEY (serverId) REFERENCES servers(id) );",
-                "CREATE TABLE IF NOT EXISTS roles ( id varchar(255) PRIMARY KEY, name varchar(255) );",
-                "CREATE TABLE IF NOT EXISTS groups_roles (group_id INT, role_id varchar(255), rolePos INT NOT NULL, isManager BOOLEAN, isGeneric BOOLEAN, PRIMARY KEY (group_id, role_id), FOREIGN KEY (group_id) REFERENCES groups(id), FOREIGN KEY (role_id) REFERENCES roles(id) );",
-                "CREATE TABLE IF NOT EXISTS supportchannels ( channelId VARCHAR(255) PRIMARY KEY, pingChannelId VARCHAR(255), roleId VARCHAR(255) );"
-        };
-
-        // Load and register MariaDB JDBC driver (optional in recent versions)
-        Class.forName("org.mariadb.jdbc.Driver");
-        Main.LOG("Connected to MariaDB!");
-
-        for (String q : createTableQuerys) {
-            ExecuteQuery(q);
-        }
-
-        return new RollenBot();
+        RoleManagerDB.CreateTablesIfNotExist();
+        return new RoleManager();
     }
 
     public static CountingBot setupCountingBot() {

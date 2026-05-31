@@ -42,8 +42,8 @@ public class BirthdayBot extends ListenerAdapter {
         int day = now.getDayOfMonth();
         int month = now.getMonthValue();
 
-        ResultSet resultSet = Main.ExecuteQuery_NOLOG("SELECT * FROM birthday_days WHERE day = " + day + " and month = " + month + " AND was_selebrated = 0;");
-        Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 0 WHERE NOT (day = " + day + " AND month = " + month + ");");
+        ResultSet resultSet = Main.ExecuteQuery_NOLOG("SELECT * FROM birthday_days WHERE day = " + day + " and month = " + month + " AND was_celebrated = 0;");
+        Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_celebrated = 0 WHERE NOT (day = " + day + " AND month = " + month + ");");
 
         TextChannel textChannelById = jda.getTextChannelById(channelId);
         List<String> birthday_people = new ArrayList<>();
@@ -76,7 +76,7 @@ public class BirthdayBot extends ListenerAdapter {
             Main.LOG(message.toString());
         }
         for (String id : birthday_people) {
-            Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_selebrated = 1 WHERE id = " + id + ";");
+            Main.ExecuteQuery_NOLOG("UPDATE birthday_days SET was_celebrated = 1 WHERE id = " + id + ";");
         }
     }
 
