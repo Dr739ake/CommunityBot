@@ -73,8 +73,6 @@ public class MultiBanBot extends ListenerAdapter {
                     }
 
                     event.reply(reply.toString()).queue();
-                } else {
-                    event.reply("No Permission").queue();
                 }
             }
             break;
@@ -109,8 +107,6 @@ public class MultiBanBot extends ListenerAdapter {
                     }
 
                     event.reply(reply.toString()).queue();
-                } else {
-                    event.reply("No Permission").queue();
                 }
             }
             break;

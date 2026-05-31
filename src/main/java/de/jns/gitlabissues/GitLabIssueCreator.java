@@ -26,6 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -41,18 +42,23 @@ public class GitLabIssueCreator extends ListenerAdapter {
         this.gitlabUrl = gitlabUrl;
         this.privateToken = privateToken;
 
-        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response;
+        try (HttpClient client = HttpClient.newHttpClient()) {
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(gitlabUrl + "/api/v4/projects/"))
-                .header("PRIVATE-TOKEN", privateToken)
-                .GET()
-                .build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(gitlabUrl + "/api/v4/projects/"))
+                    .header("PRIVATE-TOKEN", privateToken)
+                    .timeout(Duration.ofSeconds(1))
+                    .GET()
+                    .build();
 
-        HttpResponse<String> response = client.send(
-                request,
-                HttpResponse.BodyHandlers.ofString()
-        );
+            response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+        } catch (IOException | InterruptedException e) {
+            throw e;
+        }
 
         JSONArray array = new JSONArray(response.body());
 
@@ -117,8 +123,6 @@ public class GitLabIssueCreator extends ListenerAdapter {
                     .queue();
 
             event.reply("Done").queue();
-        } else {
-            event.reply("No Permission").queue();
         }
     }
 
