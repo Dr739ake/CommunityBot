@@ -1,0 +1,314 @@
+package de.jns;
+
+import de.jns.pojo.ServerDataPOJO;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
+import net.dv8tion.jda.internal.entities.emoji.UnicodeEmojiImpl;
+import org.jetbrains.annotations.NotNull;
+
+import java.awt.*;
+import java.text.DateFormat;
+import java.util.*;
+
+public class CountingBot extends ListenerAdapter {
+
+    public static HashMap<String, ServerDataPOJO> data = new HashMap<>();
+    public static HashMap<String, ServerDataPOJO> dataBackup = new HashMap<>();
+
+    public JDA jda;
+    private boolean bRememberLastCountMessage;
+
+    public CountingBot() {
+        jda = Main.jda;
+        Main.LOG("CountingBot Constructor");
+
+        Main.commandListener.RegisterCommand("bann", this::IsMemberAdmin, this::banCMD);
+        Main.commandListener.RegisterCommand("unbann", this::IsMemberAdmin, this::unbanCMD);
+        Main.commandListener.RegisterCommand("setup", this::IsMemberAdmin, this::setupCMD);
+    }
+
+    @Override
+    public void onMessageDelete(@NotNull MessageDeleteEvent event) {
+        ServerDataPOJO serverData = data.get(event.getGuild().getId());
+        if (serverData == null) return;
+        try {
+            if (event.getChannel().getId().equals(serverData.channelId) && event.getMessageId().equals(serverData.lastCountMessage.getId())) {
+                event.getChannel().sendMessage(serverData.lastCountMessage.getContentRaw()).queue();
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    @Override
+    public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+        ServerDataPOJO serverData = data.get(event.getGuild().getId());
+        if (serverData == null) return;
+        if (!event.getAuthor().isBot() && serverData.lastCountMessage != null && event.getMessage().getContentRaw().equals(serverData.lastCountMessage.getContentRaw())) {
+            String sReaction = "✅";
+
+            if (event.getMessage().getContentRaw().equals(Integer.toString(serverData.highScore))) {
+                sReaction = "\uD83C\uDFC6";
+            }
+
+            addReaction(event, sReaction);
+        }
+
+        if (event.getAuthor().isBot())
+            return;
+        if (!event.getChannel().getId().equals(serverData.channelId))
+            return;
+
+        String messageSent = event.getMessage().getContentRaw();
+
+        int number;
+        try {
+            number = Integer.parseInt(messageSent);
+        } catch (NumberFormatException e) {
+            if (event.getMember().hasPermission(Permission.ADMINISTRATOR))
+                return;
+            event.getMessage().delete().queue();
+            Main.LOG("Deleted invalid message: '" + event.getMessage().getContentRaw() + "' send by '"
+                    + event.getAuthor().getName() + "'");
+            return;
+        }
+
+        Date now = new Date();
+        Locale locale = Locale.GERMAN;
+
+        System.out.print(DateFormat.getDateInstance(DateFormat.DEFAULT, locale).format(now) + " " + DateFormat.getTimeInstance(DateFormat.DEFAULT, locale).format(now) + " || ");
+
+        String fail = "❌";
+        if (!Main.devMode) {
+            if (event.getAuthor().getId().equals(serverData.lastUser)) {
+                // game failed
+                addReaction(event, fail);
+
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+
+                embedBuilder.setColor(Color.RED);
+                embedBuilder.setTitle("[Fail] Nicht zweimal hintereinander.");
+
+                Main.LOG("[ " + " ] User '" + event.getAuthor().getName() + "' failed at "
+                        + (serverData.curNum + 1) + ". They counted twice.");
+                event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+                bRememberLastCountMessage = false;
+
+                ServerDataPOJO dataCopy = new ServerDataPOJO(serverData);
+                dataBackup.put(event.getGuild().getId(), dataCopy);
+                reset(serverData);
+                return;
+            }
+        }
+
+        if (number != (serverData.curNum + 1)) {
+            // game failed
+            addReaction(event, fail);
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+
+            embedBuilder.setColor(Color.RED);
+            embedBuilder.setTitle("[Fail] Fangt wieder bei 1 an.");
+            embedBuilder.setFooter("Die erwartete Zahl war eigentlich: " + (serverData.curNum + 1));
+            Main.LOG("User '" + event.getAuthor().getName() + "' failed at " + (serverData.curNum + 1)
+                    + " with the number " + number + ". Wrong Number.");
+            event.getChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+            bRememberLastCountMessage = false;
+
+            ServerDataPOJO dataCopy = new ServerDataPOJO(serverData);
+            dataBackup.put(event.getGuild().getId(), dataCopy);
+            reset(serverData);
+        } else if (number == (serverData.curNum + 1)) {
+
+            if (event.getMember().hasPermission(Permission.ADMINISTRATOR))
+                bRememberLastCountMessage = true;
+
+            serverData.curNum = number;
+            serverData.lastUser = event.getAuthor().getId();
+
+            if (bRememberLastCountMessage) {
+                serverData.lastCountMessage = event.getMessage();
+            }
+
+            serverData.save();
+            Main.LOG("User '" + event.getAuthor().getName() + "' counted " + number + ".");
+
+            if (number > serverData.highScore) {
+                String trophy = "\uD83C\uDFC6";
+                addReaction(event, trophy);
+                serverData.highScore++;
+            } else if (number != 404 && number <= serverData.highScore) {
+                String check = "✅";
+                addReaction(event, check);
+            }
+            serverData.save();
+
+            if (number % 100 == 0) {
+                String hundred = "\uD83D\uDCAF";
+                addReaction(event, hundred);
+            }
+
+            // for switch
+            String notFound = "❎";
+            String heHe = "\uD83C\uDF46";
+            String cookie = "\uD83C\uDF6A";
+            String police = "\uD83D\uDE93";
+            String fireForce = "\uD83D\uDE92";
+            String ambulance = "\uD83D\uDE91";
+            String computer = "\uD83D\uDCBB";
+            String devil = "\uD83D\uDE08";
+            String e = "\uD83C\uDDEA";
+            String i = "\uD83C\uDDEE";
+            String star = "⭐";
+            String sponge = "\uD83E\uDDFD";
+            String alien = "\uD83D\uDC7D";
+
+            switch (number) {
+                case 21 -> {
+                    String nine = "9️⃣";
+                    addReaction(event, nine);
+                    String plus = "➕";
+                    addReaction(event, plus);
+                    String ten = "🔟";
+                    addReaction(event, ten);
+                }
+                case 24 -> addReaction(event, sponge);
+                case 25 -> addReaction(event, star);
+                case 34 -> addReaction(event, heHe);
+                case 42 -> {
+                    String forty = "4️⃣";
+                    addReaction(event, forty);
+                    String two = "2️⃣";
+                    addReaction(event, two);
+                }
+                case 51 -> addReaction(event, alien);
+                case 69 -> {
+                    String n = "\uD83C\uDDF3";
+                    addReaction(event, n);
+                    addReaction(event, i);
+                    String c = "\uD83C\uDDE8";
+                    addReaction(event, c);
+                    addReaction(event, e);
+                }
+                case 404 -> addReaction(event, notFound);
+                case 420 -> {
+                    String l = "\uD83C\uDDF1";
+                    addReaction(event, l);
+                    addReaction(event, i);
+                    String f = "\uD83C\uDDEB";
+                    addReaction(event, f);
+                    addReaction(event, e);
+                }
+                case 666 -> addReaction(event, devil);
+                case 727 -> addReaction(event, cookie);
+                case 110, 911 -> addReaction(event, police);
+                case 112 -> {
+                    addReaction(event, fireForce);
+                    addReaction(event, ambulance);
+                    addReaction(event, police);
+                }
+                case 1337 -> addReaction(event, computer);
+            }
+        }
+    }
+
+    public void reset(ServerDataPOJO serverData) {
+        serverData.curNum = 0;
+        serverData.lastUser = null;
+        serverData.lastCountMessage = null;
+        serverData.save();
+    }
+
+    boolean IsMemberAdmin(SlashCommandInteractionEvent event) {
+        return Objects.requireNonNull(event.getMember()).hasPermission(Permission.ADMINISTRATOR);
+    }
+
+    boolean banCMD(SlashCommandInteractionEvent event) {
+        EnumSet<Permission> perms = EnumSet.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
+        ServerDataPOJO serverData = data.get(event.getGuild().getId());
+        SlashCommandInteraction interaction = (SlashCommandInteraction) event.getHook().getInteraction();
+        User user = Objects.requireNonNull(interaction.getOption("user")).getAsUser();
+
+        TextChannel channel = jda.getChannelById(TextChannel.class, serverData.channelId);
+        TextChannelManager manager = channel.getManager();
+
+        channel.getIterableHistory().takeAsync(100).thenAccept(messages -> {
+            for (Message message : messages) {
+                if (message.getId().equals(serverData.lastCountMessage.getId())) {
+                    break;
+                }
+                message.delete().queue();
+            }
+        });
+
+        try {
+            ServerDataPOJO backup = dataBackup.get(event.getGuild().getId());
+
+            serverData.curNum = Integer.parseInt(backup.lastCountMessage.getContentRaw());
+            serverData.lastUser = backup.lastCountMessage.getAuthor().getId();
+            serverData.save();
+
+            event.getChannel().sendMessage("Die aktuelle Zahl lautet: " + serverData.curNum).queue();
+        } catch (Exception e) {
+            Main.LOG("This shit did not work as intented, BUT it still banned the User");
+            Main.LOG("Exception: ");
+            e.printStackTrace();
+        }
+
+        manager.putMemberPermissionOverride(user.getIdLong(), null, perms);
+        manager.queue();
+
+        event.reply(user.getAsMention() + " gebannt").setEphemeral(true).queue();
+        return true;
+    }
+
+    boolean unbanCMD(SlashCommandInteractionEvent event) {
+        EnumSet<Permission> perms = EnumSet.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
+        ServerDataPOJO serverData = data.get(event.getGuild().getId());
+        SlashCommandInteraction interaction = (SlashCommandInteraction) event.getHook().getInteraction();
+        User user = Objects.requireNonNull(interaction.getOption("user")).getAsUser();
+
+        TextChannel channel = jda.getChannelById(TextChannel.class, serverData.channelId);
+        TextChannelManager manager = channel.getManager();
+
+        manager.putMemberPermissionOverride(user.getIdLong(), perms, null);
+        manager.queue();
+
+        event.reply(user.getAsMention() + " entbannt").setEphemeral(true).queue();
+        return true;
+    }
+
+    boolean setupCMD(SlashCommandInteractionEvent event) {
+        ServerDataPOJO imNewHere = new ServerDataPOJO(event.getGuild().getId());
+        imNewHere.channelId = event.getChannelId();
+        imNewHere.save();
+        data.put(event.getGuild().getId(), imNewHere);
+        event.reply("Spiel eingerichtet!").setEphemeral(true).queue();
+
+        event.getGuild().updateCommands().addCommands(
+                Commands.slash("bann", "Bannt einen User vom Zählen-Game")
+                        .addOption(OptionType.USER, "user", "Verbrecher")
+                ,
+                Commands.slash("unbann", "Entbannt einen User vom Zählen-Game")
+                        .addOption(OptionType.USER, "user", "Ex-Verbrecher")
+                ,
+                Commands.slash("score", "Zeigt dir den Highscore")
+        ).queue();
+        return true;
+    }
+
+    private void addReaction(MessageReceivedEvent event, String emoji) {
+        event.getMessage().addReaction(new UnicodeEmojiImpl(emoji)).queue();
+    }
+}
