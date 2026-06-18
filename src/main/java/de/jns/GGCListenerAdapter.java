@@ -31,8 +31,8 @@ public class GGCListenerAdapter extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        String command = event.getName();
-        //event.deferReply().queue();
+        String command = event.getName() ;
+        event.deferReply().queue();
 
         if (commands.containsKey(command)) {
             Command cmd = commands.get(command);
