@@ -26,7 +26,7 @@ public class Main {
     public static JDA jda;
     public static BotListenerAdapter commandListener = new BotListenerAdapter();
 
-    public static String VERSION_NUMBER = "v1.6";
+    public static String VERSION_NUMBER = "v1.7";
 
     public static boolean devMode;
 
@@ -68,6 +68,7 @@ public class Main {
     static CountingBot countingBot;
     static BirthdayBot birthdayBot;
     static ModerationBot moderationBot;
+    static LevelSystem levelSystem;
 
     public static void main(String[] args) throws Exception {
         if (!new File(PROPERTIES_FILE).exists()) {
@@ -181,6 +182,18 @@ public class Main {
                 Main.LOG("moderationBot failed to start: " + e.getMessage());
             }
         }
+
+        if (levelSystem  == null) {
+            try {
+                levelSystem = setupLevelSystem();
+                listenerAdaptersList.add(levelSystem);
+            }
+            catch (Exception e)
+            {
+                Main.LOG("LevelSystem failed to start: " + e.getMessage());
+            }
+        }
+
         return listenerAdaptersList;
     }
 
@@ -197,6 +210,10 @@ public class Main {
             ExecuteQuery(q);
         }
         return bot;
+    }
+
+    public static LevelSystem setupLevelSystem() {
+        return new LevelSystem();
     }
 
     public static ModerationBot setupModerationBot(String moderationLogChannelName) {
@@ -241,6 +258,9 @@ public class Main {
                             .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
                             .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
+                    ,
+                    /// LevelSystem ///
+                    Commands.slash("seelevel", "Zeigt dein aktuelles level.")
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -262,6 +282,9 @@ public class Main {
                             .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
                             .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
+                    ,
+                    /// LevelSystem ///
+                    Commands.slash("seelevel", "Zeigt dein aktuelles level.")
             ).queue();
         }
     }
