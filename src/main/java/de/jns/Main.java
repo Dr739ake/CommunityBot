@@ -106,6 +106,7 @@ public class Main {
         }
 
         System.out.println("Bot-Version: " + VERSION_NUMBER);
+        System.out.println("Running...");
         while (true) {
             if (areListenerAdaptersMissing()){
                 List<ListenerAdapter> list = setupListenerAdapters();

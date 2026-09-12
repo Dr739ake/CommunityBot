@@ -49,7 +49,6 @@ public class LevelSystem extends ListenerAdapter {
     }
 
     private void setMemberEXP(Guild guild, User user, Long exp) {
-        System.out.println("New XP = " + exp);
         try {
             Files.createDirectories(Paths.get("data/exp/" + guild.getId()));
         } catch (IOException e) {
@@ -64,11 +63,7 @@ public class LevelSystem extends ListenerAdapter {
     }
 
     private long getExpByText(String text) {
-        System.out.println("len " + text.length());
-        System.out.println("byte len " + text.getBytes().length);
-        long exp = ((long) text.length() * text.getBytes().length) % maxEXPperMsg;
-        System.out.println("exp " + exp);
-        return exp;
+        return ((long) text.length() * text.getBytes().length) % maxEXPperMsg;
     }
 
     private static int getLevel(long exp) {
