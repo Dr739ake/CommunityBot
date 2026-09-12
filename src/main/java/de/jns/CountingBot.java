@@ -1,5 +1,6 @@
 package de.jns;
 
+import de.jns.pojo.CommandResult;
 import de.jns.pojo.ServerDataPOJO;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
@@ -234,7 +235,7 @@ public class CountingBot extends ListenerAdapter {
         return Objects.requireNonNull(event.getMember()).hasPermission(Permission.ADMINISTRATOR);
     }
 
-    boolean banCMD(SlashCommandInteractionEvent event) {
+    CommandResult banCMD(SlashCommandInteractionEvent event) {
         EnumSet<Permission> perms = EnumSet.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
         ServerDataPOJO serverData = data.get(event.getGuild().getId());
         SlashCommandInteraction interaction = (SlashCommandInteraction) event.getHook().getInteraction();
@@ -269,11 +270,10 @@ public class CountingBot extends ListenerAdapter {
         manager.putMemberPermissionOverride(user.getIdLong(), null, perms);
         manager.queue();
 
-        event.reply(user.getAsMention() + " gebannt").setEphemeral(true).queue();
-        return true;
+        return new CommandResult(user.getAsMention() + " gebannt", true);
     }
 
-    boolean unbanCMD(SlashCommandInteractionEvent event) {
+    CommandResult unbanCMD(SlashCommandInteractionEvent event) {
         EnumSet<Permission> perms = EnumSet.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
         ServerDataPOJO serverData = data.get(event.getGuild().getId());
         SlashCommandInteraction interaction = (SlashCommandInteraction) event.getHook().getInteraction();
@@ -285,16 +285,14 @@ public class CountingBot extends ListenerAdapter {
         manager.putMemberPermissionOverride(user.getIdLong(), perms, null);
         manager.queue();
 
-        event.reply(user.getAsMention() + " entbannt").setEphemeral(true).queue();
-        return true;
+        return new CommandResult(user.getAsMention() + " entbannt", true);
     }
 
-    boolean setupCMD(SlashCommandInteractionEvent event) {
+    CommandResult setupCMD(SlashCommandInteractionEvent event) {
         ServerDataPOJO imNewHere = new ServerDataPOJO(event.getGuild().getId());
         imNewHere.channelId = event.getChannelId();
         imNewHere.save();
         data.put(event.getGuild().getId(), imNewHere);
-        event.reply("Spiel eingerichtet!").setEphemeral(true).queue();
 
         event.getGuild().updateCommands().addCommands(
                 Commands.slash("bann", "Bannt einen User vom Zählen-Game")
@@ -305,7 +303,7 @@ public class CountingBot extends ListenerAdapter {
                 ,
                 Commands.slash("score", "Zeigt dir den Highscore")
         ).queue();
-        return true;
+        return new CommandResult("Spiel eingerichtet!", true);
     }
 
     private void addReaction(MessageReceivedEvent event, String emoji) {

@@ -24,7 +24,7 @@ import java.sql.SQLException;
 public class Main {
 
     public static JDA jda;
-    public static GGCListenerAdapter commandListener = new GGCListenerAdapter();
+    public static BotListenerAdapter commandListener = new BotListenerAdapter();
 
     public static String VERSION_NUMBER = "v1.6";
 
@@ -184,7 +184,7 @@ public class Main {
         return listenerAdaptersList;
     }
 
-    public static BirthdayBot setupBirthdayBot() throws Exception {
+    public static BirthdayBot setupBirthdayBot() {
         String channelId = properties.getProperty("birthdayChannel");
         BirthdayBot bot = new BirthdayBot(channelId);
 

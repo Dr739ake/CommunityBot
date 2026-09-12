@@ -1,5 +1,6 @@
 package de.jns;
 
+import de.jns.pojo.CommandResult;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
@@ -95,29 +96,28 @@ public class BirthdayBot extends ListenerAdapter {
         return Objects.requireNonNull(event.getMember()).hasPermission(Permission.ADMINISTRATOR);
     }
 
-    boolean AddBDay(SlashCommandInteractionEvent event) {
+    CommandResult AddBDay(SlashCommandInteractionEvent event) {
         Member executor = event.getMember();
         int day = Objects.requireNonNull(event.getOption("tag")).getAsInt();
         int month = Objects.requireNonNull(event.getOption("monat")).getAsInt();
 
         Main.ExecuteQuery("INSERT INTO birthday_days (id, day, month) VALUES ('" +executor.getId()+ "', "+ day +", "+ month +") ON CONFLICT(id) DO UPDATE SET day = excluded.day, month = excluded.month, was_celebrated = 0;");
 
-        event.getHook().sendMessage("Dein Geburtstag wurde eingetragen.").queue();
-        return true;
+        return new CommandResult("Dein Geburtstag wurde eingetragen.", false);
     }
 
-    boolean RemoveBDay(SlashCommandInteractionEvent event) {
+    CommandResult RemoveBDay(SlashCommandInteractionEvent event) {
         Member executor = event.getMember();
 
         Main.ExecuteQuery("DELETE FROM birthday_days WHERE id = '" + executor.getId() + "';");
-        event.getHook().sendMessage("Dein Geburtstag wurde gelöscht.").queue();
-        return true;
+        return new CommandResult("Dein Geburtstag wurde gelöscht.", true);
     }
 
-    boolean SetLogChannelCommand(SlashCommandInteractionEvent event)
+    CommandResult SetLogChannelCommand(SlashCommandInteractionEvent event)
     {
         String channelId = Objects.requireNonNull(event.getOption("channel")).getAsString();
         TextChannel textChannelById = jda.getTextChannelById(channelId);
+        String reply;
 
         if (textChannelById != null) {
             Main.ExecuteQuery(
@@ -126,12 +126,12 @@ public class BirthdayBot extends ListenerAdapter {
                             + "ON DUPLICATE KEY UPDATE server_id = VALUES(server_id), textChannelId = VALUES(textChannelId);"
             );
 
-            event.getHook().sendMessage("Channel eingetragen").queue();
+            reply = "Channel eingetragen";
         } else {
-            event.getHook().sendMessage("Dieser Channel existiert nicht.").queue();
+            reply = "Dieser Channel existiert nicht.";
         }
 
-        return true;
+        return new CommandResult(reply, true);
     }
 
     @Override

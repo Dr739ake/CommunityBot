@@ -1,5 +1,6 @@
 package de.jns;
 
+import de.jns.pojo.CommandResult;
 import de.jns.pojo.SupportChannelPOJO;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
@@ -139,7 +140,7 @@ public class ModerationBot extends ListenerAdapter {
         knownSupportChannels.put(key, blob);
     }
 
-    boolean SetSupportChannel(SlashCommandInteractionEvent event)
+    CommandResult SetSupportChannel(SlashCommandInteractionEvent event)
     {
         VoiceChannel voiceChannel = Objects.requireNonNull(event.getInteraction().getOption("vc")).getAsChannel().asVoiceChannel();
         TextChannel textChannel = Objects.requireNonNull(event.getInteraction().getOption("ping")).getAsChannel().asTextChannel();
@@ -154,8 +155,7 @@ public class ModerationBot extends ListenerAdapter {
 
         String query = "INSERT INTO supportchannels (channelId, pingChannelId, roleId) VALUES ( '" + voiceChannel.getId() + "', '" + textChannel.getId() + "', '" + role.getId() + "' ) ON CONFLICT(channelId) DO UPDATE SET pingChannelId = excluded.pingChannelId, roleId = excluded.roleId;";
         Main.ExecuteQuery(query);
-        event.getHook().sendMessage(role.getAsMention() + " wird nun in " + textChannel.getAsMention() + " gepingt, wenn ein User " + voiceChannel.getAsMention() + " betritt.").queue();
-        return true;
+        return new CommandResult(role.getAsMention() + " wird nun in " + textChannel.getAsMention() + " gepingt, wenn ein User " + voiceChannel.getAsMention() + " betritt.", false);
     }
 
     @Override
