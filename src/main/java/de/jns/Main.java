@@ -26,7 +26,7 @@ public class Main {
     public static JDA jda;
     public static BotListenerAdapter commandListener = new BotListenerAdapter();
 
-    public static String VERSION_NUMBER = "v1.7";
+    public static String VERSION_NUMBER = "v1.7.1";
 
     public static boolean devMode;
 

@@ -47,21 +47,22 @@ public class ModerationBot extends ListenerAdapter {
     @Override
     public void onGuildMemberUpdate(GuildMemberUpdateEvent event) {
         Member member = event.getMember();
+        TextChannel textChannelById = event.getGuild().getTextChannelById(moderationLog);
 
-        int checkName = isNicknameSuspicious(member.getNickname());
+        if (textChannelById != null) {
+            int checkName = isNicknameSuspicious(member.getNickname());
 
-        if (checkName == 1) {
-            member.modifyNickname(null).queue();
-        } else if (checkName == 2) {
-            event.getGuild().getTextChannelById(moderationLog)
-                    .sendMessage("⚠️ Fremdwerbung im Nickname erkannt: `" + member.getNickname() + "` bei " + member.getUser().getAsMention())
-                    .queue();
-            member.modifyNickname(null).queue();
-        } else if (checkName == 3) {
-            event.getGuild().getTextChannelById(moderationLog)
-                    .sendMessage("⚠️ Verdächtiger Nickname erkannt: `"
-                            + member.getNickname() + "` bei " + member.getUser().getAsMention())
-                    .queue();
+            if (checkName == 1) {
+                member.modifyNickname(null).queue();
+            } else if (checkName == 2) {
+                textChannelById.sendMessage("⚠️ Fremdwerbung im Nickname erkannt: `" + member.getNickname() + "` bei " + member.getUser().getAsMention())
+                        .queue();
+                member.modifyNickname(null).queue();
+            } else if (checkName == 3) {
+                textChannelById.sendMessage("⚠️ Verdächtiger Nickname erkannt: `"
+                                + member.getNickname() + "` bei " + member.getUser().getAsMention())
+                        .queue();
+            }
         }
     }
 
