@@ -26,7 +26,7 @@ public class Main {
     public static JDA jda;
     public static BotListenerAdapter commandListener = new BotListenerAdapter();
 
-    public static String VERSION_NUMBER = "v1.7.1";
+    public static String VERSION_NUMBER = "v1.7.2";
 
     public static boolean devMode;
 
@@ -261,7 +261,8 @@ public class Main {
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
                     ,
                     /// LevelSystem ///
-                    Commands.slash("seelevel", "Zeigt dein aktuelles level.")
+                    Commands.slash("seelevel", "Zeigt dein aktuelles level."),
+                    Commands.slash("leaderboard", "Zeigt die Level-Bestenliste.")
             ).queue();
         } else {
             guild.updateCommands().addCommands(
@@ -285,7 +286,8 @@ public class Main {
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
                     ,
                     /// LevelSystem ///
-                    Commands.slash("seelevel", "Zeigt dein aktuelles level.")
+                    Commands.slash("seelevel", "Zeigt dein aktuelles level."),
+                    Commands.slash("leaderboard", "Zeigt die Level-Bestenliste.")
             ).queue();
         }
     }
