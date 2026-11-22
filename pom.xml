@@ -6,7 +6,7 @@
 
     <groupId>de.jns</groupId>
     <artifactId>CommunityBot</artifactId>
-    <version>1.7.1</version>
+    <version>1.8</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

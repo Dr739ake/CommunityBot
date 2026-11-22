@@ -26,7 +26,7 @@ public class Main {
     public static JDA jda;
     public static BotListenerAdapter commandListener = new BotListenerAdapter();
 
-    public static String VERSION_NUMBER = "v1.7.2";
+    public static String VERSION_NUMBER = "v1.8";
 
     public static boolean devMode;
 
@@ -260,6 +260,11 @@ public class Main {
                             .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
                     ,
+                    Commands.slash("sethoneypodchannel", "Erstellt oder setzt den Honeypod-Kanal.")
+                            .addOption(OptionType.CHANNEL, "channel", "Bestehender Textkanal; leer lassen, um #honeypod zu erstellen.", false)
+                    ,
+                    Commands.slash("deletehoneypod", "Entfernt den Honeypod und löscht den vom Bot erstellten Kanal.")
+                    ,
                     /// LevelSystem ///
                     Commands.slash("seelevel", "Zeigt dein aktuelles level."),
                     Commands.slash("leaderboard", "Zeigt die Level-Bestenliste.")
@@ -284,6 +289,11 @@ public class Main {
                             .addOption(OptionType.CHANNEL, "vc", "Voice-Channel", true)
                             .addOption(OptionType.CHANNEL, "ping", "Ping-Channel", true)
                             .addOption(OptionType.ROLE, "role", "Team-Rolle die gepingt werden soll.", true)
+                    ,
+                    Commands.slash("sethoneypodchannel", "Erstellt oder setzt den Honeypod-Kanal.")
+                            .addOption(OptionType.CHANNEL, "channel", "Bestehender Textkanal; leer lassen, um #honeypod zu erstellen.", false)
+                    ,
+                    Commands.slash("deletehoneypod", "Entfernt den Honeypod und löscht den vom Bot erstellten Kanal.")
                     ,
                     /// LevelSystem ///
                     Commands.slash("seelevel", "Zeigt dein aktuelles level."),

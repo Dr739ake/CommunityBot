@@ -47,15 +47,15 @@ public class BotListenerAdapter extends ListenerAdapter {
                 result = cmd.execute(event);
             }
 
-            if (!permission) {
-                event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
-            }
-            else
-            {
-                ReplyCallbackAction reply = event.reply(result.message());
-                if (result.ephemeral())
-                    reply.setEphemeral(true);
-                reply.queue();
+            if (!event.isAcknowledged()) {
+                if (!permission) {
+                    event.reply("You don't have permission to use this command!").setEphemeral(true).queue();
+                } else {
+                    ReplyCallbackAction reply = event.reply(result.message());
+                    if (result.ephemeral())
+                        reply.setEphemeral(true);
+                    reply.queue();
+                }
             }
 
         }
